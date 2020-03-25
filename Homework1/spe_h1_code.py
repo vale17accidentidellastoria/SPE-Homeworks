@@ -1,5 +1,6 @@
 import pandas as pd
 import math
+import matplotlib.pyplot as plt
 
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
@@ -69,6 +70,24 @@ def computeJFI(x):
     jfi = pow(sum1, 2) / (n * sum2)
     return jfi
 
+def computeLorenzCurvePoints(x, mean, p, l): #TODO: check if the function is really correct! 
+    x.sort()
+    n = len(x)
+    for i in range(1,n+1):
+        p.append(i / n)
+        sum = 0
+        for i2 in range(0,i):
+            sum += x[i2]
+        l.append(sum / (mean * n))
+
+def printLorenzCurveGap(p, l):
+    plt.plot(p, l, linewidth=2.0)
+    y_lim = plt.ylim()
+    x_lim = plt.xlim()
+    plt.plot(x_lim, y_lim, 'k-', color = 'r', linewidth=1.0)
+    plt.ylim(y_lim)
+    plt.xlim(x_lim)
+    plt.show()
 
 #---------------------------------------------------
 
@@ -102,6 +121,12 @@ gap3 = computeGap(data3, mean3)
 print("\t The Lorenz Curve Gap for the data is", gap3)
 jfi3 = computeJFI(data3)
 print("\t The Jain's fairness index for the data is", jfi3)
+
+p = []
+l = []
+computeLorenzCurvePoints(data3, mean3, p, l)
+printLorenzCurveGap(p,l)
+
 
 print("\n####################")
 #---------------------------------------------------
