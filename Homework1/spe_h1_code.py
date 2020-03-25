@@ -10,6 +10,7 @@ def loadCSV(csv_file):
         data_points = dataset[0].values.tolist() #convert the values of the column into a list of values 
     elif (column_dim > 1): #check if data is expressed as a matrix of values (multiple columns)
         data_points = dataset.values.tolist()
+    #TODO: check if we have only a single row of values
     return data_points
 
 def computeMedian(x):
@@ -37,21 +38,88 @@ def computeStdDev(x, mean):
     n = len(x)
     for i in range(0,n):
         sum_squares += pow((x[i] - mean), 2)
-    std_dev = math.sqrt(sum_squares / n)
+    std_dev = math.sqrt(sum_squares / (n -1)) #divide by n or (n-1)??
     return std_dev
 
-data = loadCSV("data_hw1/data_ex1.csv")
+def computeCov(std_dev, mean):
+    coV = std_dev / mean
+    return coV
+
+def computeMAD(x, mean):
+    sum_abs = 0
+    n = len(x)
+    for i in range(0,n):
+        sum_abs += abs(x[i] - mean)
+    mad = sum_abs / n
+    return mad
+
+def computeGap(x, mean):
+    mad = computeMAD(x, mean)
+    gap = mad / (2 * mean)
+    return gap
+
+def computeJFI(x):
+    sum1 = 0
+    sum2 = 0
+    n = len(x)
+    for i in range(0,n): #compute the sum at the numerator
+        sum1 += x[i]
+    for i in range(0,n): #compute the sum at the denominator
+        sum2 += pow(x[i], 2)
+    jfi = pow(sum1, 2) / (n * sum2)
+    return jfi
+
+
+#---------------------------------------------------
+
 print("\nExercise 1")
 
-median = computeMedian(data)
-print("\t The Median is", median)
+data1 = loadCSV("data_hw1/data_ex1.csv")
+median1 = computeMedian(data1)
+print("\t The Median is", median1)
+mean1 = computeMean(data1)
+print("\t The Mean is", mean1)
 
-mean = computeMean(data)
-print("\t The Mean is", mean)
-
-std_dev = computeStdDev(data, mean)
-print("\t The Standard Deviation is", std_dev)
-
-print("\n####################\n")
+print("\n####################")
+#---------------------------------------------------
 
 print("\nExercise 2")
+
+#solution for Exercise 2
+
+print("\n####################")
+#---------------------------------------------------
+
+print("\nExercise 3")
+
+data3 = loadCSV("data_hw1/data_ex3.csv")
+mean3 = computeMean(data3)
+std_dev3 = computeStdDev(data3, mean3)
+
+coV3 = computeCov(std_dev3, mean3)
+print("\t The Coefficient of Variation for the data is", coV3)
+gap3 = computeGap(data3, mean3)
+print("\t The Lorenz Curve Gap for the data is", gap3)
+jfi3 = computeJFI(data3)
+print("\t The Jain's fairness index for the data is", jfi3)
+
+print("\n####################")
+#---------------------------------------------------
+
+print("\nExercise 4")
+
+data4 = loadCSV("data_hw1/data_ex4.csv")
+
+#solution for Exercise 4
+
+print("\n####################")
+#---------------------------------------------------
+
+print("\nExercise 5")
+
+data5 = loadCSV("data_hw1/data_ex5.csv")
+
+#solution for Exercise 5
+
+print("\n####################")
+#---------------------------------------------------
