@@ -1,7 +1,14 @@
 import pandas as pd
+import numpy as np
 import math
 import matplotlib.pyplot as plt
+import random
 
+#---------------------------------------------------
+# Settings
+#---------------------------------------------------
+METRIC = {'median': 'computeMedian', 'mean':'computeMean'}
+#---------------------------------------------------
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
     #print(dataset.shape)
@@ -92,6 +99,29 @@ def printLorenzCurveGap(p, l):
     plt.show()
 
 #---------------------------------------------------
+# funzioni aggiunte da Alberto
+#---------------------------------------------------
+
+def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
+    ds_length = len(dataset)
+    samples_metric = []
+    samples_metric.append(globals()[METRIC[metric]](dataset))
+    R = math.ceil(2 * (accuracy / (1-ci_level))) - 1
+    for r in range(R):
+        tmp_dataset = []
+        for i in range(ds_length):
+            tmp_dataset.append(dataset[random.randrange(0, ds_length, 1)])
+        samples_metric.append(globals()[METRIC[metric]](tmp_dataset))
+    samples_metric.sort()
+    print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
+    return samples_metric[accuracy:(R+1-accuracy)]
+
+def printBootsrapMetric(metric):
+    plt.plot(metric, np.zeros_like(metric), '.', linewidth=2.0)
+    plt.show()
+
+
+#---------------------------------------------------
 
 print("\nExercise 1")
 
@@ -100,11 +130,14 @@ median1 = computeMedian(data1)
 print("\t The Median is", median1)
 mean1 = computeMean(data1)
 print("\t The Mean is", mean1)
+printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
 print("\n####################")
 #---------------------------------------------------
 
 print("\nExercise 2")
+data2 = loadCSV("data_hw1/data_ex2.csv")
+#print(data2)
 
 #solution for Exercise 2
 
