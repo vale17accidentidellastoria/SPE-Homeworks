@@ -57,7 +57,7 @@ def getCIMedian(data, ci_value):
     n = len(data)
     j = int(round(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
     k = int(round(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
-    return j, k
+    return data[j-1], data[k-1]
 
 def getCIMean(data, ci_value):
     eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
@@ -157,14 +157,13 @@ mean1 = computeMean(data1)
 print("\t The Mean is", mean1)
 printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
-j_ci_median, k_ci_median = getCIMedian(data1, 0.95)
-print("\t The 95% CI for the Median is between j=", j_ci_median, "and k=", k_ci_median)
-print("\t The 95% CI for the Median is:", data1[j_ci_median-1:k_ci_median])
+start_ci_median, end_ci_median = getCIMedian(data1, 0.95)
+print("\t The 95% CI for the Median is between [", start_ci_median, ",", end_ci_median, "]")
 
 start_ci_mean95, end_ci_mean95 = getCIMean(data1, 0.95)
 start_ci_mean99, end_ci_mean99 = getCIMean(data1, 0.99)
-print("\t The 95% CI for the Mean is between values", start_ci_mean95, "and", end_ci_mean95)
-print("\t The 99% CI for the Mean is between values", start_ci_mean99, "and", end_ci_mean99)
+print("\t The 95% CI for the Mean is between [", start_ci_mean95, ",", end_ci_mean95, "]")
+print("\t The 99% CI for the Mean is between [", start_ci_mean99, ",", end_ci_mean99, "]")
 #TODO: review the prints of the intervals
 
 print("\n####################")
