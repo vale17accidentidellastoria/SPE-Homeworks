@@ -197,16 +197,17 @@ mean3 = computeMean(data3)
 std_dev3 = computeStdDev(data3, mean3)
 
 coV3 = computeCov(std_dev3, mean3)
-print("\t The Coefficient of Variation for the data is", coV3)
+print("\t 1. The Coefficient of Variation for the data is", coV3)
 gap3 = computeGap(data3, mean3)
-print("\t The Lorenz Curve Gap for the data is", gap3)
+print("\t\tThe Lorenz Curve Gap for the data is", gap3)
 jfi3 = computeJFI(data3)
-print("\t The Jain's fairness index for the data is", jfi3)
+print("\t\tThe Jain's fairness index for the data is", jfi3)
 
-
+print("\t 2. Lorenz Curve Gap plotted")
 p, l = computeLorenzCurvePoints(data3, mean3)
 printLorenzCurveGap(p, l)
 
+print("\t 3. TODO")
 
 print("\n####################")
 #---------------------------------------------------
