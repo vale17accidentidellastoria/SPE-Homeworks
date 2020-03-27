@@ -3,6 +3,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import random
+import scipy.stats as st
 
 #---------------------------------------------------
 # Settings
@@ -16,7 +17,7 @@ def loadCSV(csv_file):
     column_dim = dataset.shape[1] #save the number of columns
     row_dim = dataset.shape[0] #save the number of columns
     if (column_dim == 1): #check if we have data organized in a single column
-        data_points = dataset[0].values.tolist() #convert the values of the column into a list of values 
+        data_points = dataset[0].values.tolist() #convert the values of the column into a list of values
     elif (column_dim > 1): #check if data is expressed as a matrix of values (multiple columns)
         data_points = dataset.values.tolist()
         if(row_dim == 1): #check if data is expressed as a single row
@@ -36,11 +37,11 @@ def computeMedian(x):
     return median
 
 def computeMean(x):
-    sum = 0
+    sum_x = 0
     n = len(x)
     for i in range(0,n):
-        sum += x[i]
-    mean = sum / n
+        sum_x += x[i]
+    mean = sum_x / n
     return mean
 
 def computeStdDev(x, mean):
@@ -48,8 +49,29 @@ def computeStdDev(x, mean):
     n = len(x)
     for i in range(0,n):
         sum_squares += pow((x[i] - mean), 2)
-    std_dev = math.sqrt(sum_squares / (n -1)) #divide by n or (n-1)??
+    std_dev = math.sqrt(sum_squares / (n - 1))
     return std_dev
+
+def getCIMedian(data, ci_value):
+    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    n = len(data)
+    j = int(round(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
+    k = int(round(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
+    return j, k
+
+def getCIMean(data, ci_value):
+    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    #np_mean = np.mean(data) #numpy mean
+    mean = computeMean(data)
+    #np_sem = st.sem(data) #scipy stats standard error mean
+    std_error_mean = computeStdDev(data, mean) / math.sqrt(len(data))
+
+    conf_interval = eta * std_error_mean
+
+    start_int = mean - conf_interval
+    end_int = mean + conf_interval
+
+    return start_int, end_int
 
 def computeCov(std_dev, mean):
     coV = std_dev / mean
@@ -79,21 +101,24 @@ def computeJFI(x):
     jfi = pow(sum1, 2) / (n * sum2)
     return jfi
 
-def computeLorenzCurvePoints(x, mean, p, l): #TODO: check if the function is really correct! 
+def computeLorenzCurvePoints(x, mean):
+    p_gap = []
+    l_gap = []
     x.sort()
     n = len(x)
-    for i in range(1,n+1):
-        p.append(i / n)
-        sum = 0
+    for i in range(1, n+1):
+        p_gap.append(i / n)
+        sum_x = 0
         for i2 in range(0,i):
-            sum += x[i2]
-        l.append(sum / (mean * n))
+            sum_x += x[i2]
+        l_gap.append(sum_x / (mean * n))
+    return p_gap, l_gap
 
-def printLorenzCurveGap(p, l):
-    plt.plot(p, l, linewidth=2.0)
+def printLorenzCurveGap(p_points, l_points):
+    plt.plot(p_points, l_points, linewidth=2.0)
     y_lim = plt.ylim()
     x_lim = plt.xlim()
-    plt.plot(x_lim, y_lim, 'k-', color = 'r', linewidth=1.0)
+    plt.plot(x_lim, y_lim, 'k-', color='r', linewidth=1.0)
     plt.ylim(y_lim)
     plt.xlim(x_lim)
     plt.show()
@@ -132,6 +157,16 @@ mean1 = computeMean(data1)
 print("\t The Mean is", mean1)
 printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
+j_ci_median, k_ci_median = getCIMedian(data1, 0.95)
+print("\t The 95% CI for the Median is between j=", j_ci_median, "and k=", k_ci_median)
+print("\t The 95% CI for the Median is:", data1[j_ci_median-1:k_ci_median])
+
+start_ci_mean95, end_ci_mean95 = getCIMean(data1, 0.95)
+start_ci_mean99, end_ci_mean99 = getCIMean(data1, 0.99)
+print("\t The 95% CI for the Mean is between values", start_ci_mean95, "and", end_ci_mean95)
+print("\t The 99% CI for the Mean is between values", start_ci_mean99, "and", end_ci_mean99)
+#TODO: review the prints of the intervals
+
 print("\n####################")
 #---------------------------------------------------
 
@@ -157,10 +192,9 @@ print("\t The Lorenz Curve Gap for the data is", gap3)
 jfi3 = computeJFI(data3)
 print("\t The Jain's fairness index for the data is", jfi3)
 
-p = []
-l = []
-computeLorenzCurvePoints(data3, mean3, p, l)
-printLorenzCurveGap(p,l)
+
+p, l = computeLorenzCurvePoints(data3, mean3)
+printLorenzCurveGap(p, l)
 
 
 print("\n####################")
