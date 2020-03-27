@@ -159,10 +159,10 @@ print("\t\tThe 95% CI for the Median is between [", start_ci_median, ",", end_ci
 
 mean1 = computeMean(data1)
 print("\t 2. The Mean is", mean1)
-start_ci_mean95, end_ci_mean95 = getCIMean(data1, 0.95)
-start_ci_mean99, end_ci_mean99 = getCIMean(data1, 0.99)
-print("\t\tThe 95% CI for the Mean is between [", start_ci_mean95, ",", end_ci_mean95, "]")
-print("\t\tThe 99% CI for the Mean is between [", start_ci_mean99, ",", end_ci_mean99, "]")
+start_ci_mean1_95, end_ci_mean1_95 = getCIMean(data1, 0.95)
+start_ci_mean1_99, end_ci_mean1_99 = getCIMean(data1, 0.99)
+print("\t\tThe 95% CI for the Mean is between [", start_ci_mean1_95, ",", end_ci_mean1_95, "]")
+print("\t\tThe 99% CI for the Mean is between [", start_ci_mean1_99, ",", end_ci_mean1_99, "]")
 #printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
 print("\n####################")
@@ -170,9 +170,18 @@ print("\n####################")
 
 print("\nExercise 2")
 data2 = loadCSV("data_hw1/data_ex2.csv")
-#print(data2)
 
-#solution for Exercise 2
+#print(data2[0])
+start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95 = getCIMean(data2[0], 0.95)
+print("\t 1. The 95% CI for the Mean of data of the first row is between [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
+#TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
+data2 = data2[1:] #remove the first row
+num_intervals = 0
+for x in data2:
+    mean = computeMean(x)
+    if (mean >= start_ci_mean2_firstrow_95) and (mean <= end_ci_mean2_firstrow_95):
+        num_intervals += 1
+print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals)
 
 print("\n####################")
 #---------------------------------------------------
