@@ -161,7 +161,8 @@ def printBootsrapMetric(metric):
 
 def printCIBootstrap(interval):
     n = len(interval)
-    return [interval[0], interval[n-1]]
+    output = "[ " + str(interval[0]) + ", " + str(interval[n-1]) + " ]"
+    return output
 
 
 print("\nExercise 1")
