@@ -151,20 +151,19 @@ def printBootsrapMetric(metric):
 print("\nExercise 1")
 
 data1 = loadCSV("data_hw1/data_ex1.csv")
+
 median1 = computeMedian(data1)
-print("\t The Median is", median1)
-mean1 = computeMean(data1)
-print("\t The Mean is", mean1)
-printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
-
+print("\t 1. The Median is", median1)
 start_ci_median, end_ci_median = getCIMedian(data1, 0.95)
-print("\t The 95% CI for the Median is between [", start_ci_median, ",", end_ci_median, "]")
+print("\t\tThe 95% CI for the Median is between [", start_ci_median, ",", end_ci_median, "]")
 
+mean1 = computeMean(data1)
+print("\t 2. The Mean is", mean1)
 start_ci_mean95, end_ci_mean95 = getCIMean(data1, 0.95)
 start_ci_mean99, end_ci_mean99 = getCIMean(data1, 0.99)
-print("\t The 95% CI for the Mean is between [", start_ci_mean95, ",", end_ci_mean95, "]")
-print("\t The 99% CI for the Mean is between [", start_ci_mean99, ",", end_ci_mean99, "]")
-#TODO: review the prints of the intervals
+print("\t\tThe 95% CI for the Mean is between [", start_ci_mean95, ",", end_ci_mean95, "]")
+print("\t\tThe 99% CI for the Mean is between [", start_ci_mean99, ",", end_ci_mean99, "]")
+#printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
 print("\n####################")
 #---------------------------------------------------
