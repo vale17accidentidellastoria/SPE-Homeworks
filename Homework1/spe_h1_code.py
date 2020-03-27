@@ -8,7 +8,7 @@ import scipy.stats as st
 #---------------------------------------------------
 # Settings
 #---------------------------------------------------
-METRIC = {'median': 'computeMedian', 'mean':'computeMean'}
+METRIC = {'median': 'computeMedian', 'mean': 'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev'}
 #---------------------------------------------------
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
@@ -44,7 +44,8 @@ def computeMean(x):
     mean = sum_x / n
     return mean
 
-def computeStdDev(x, mean):
+def computeStdDev(x):
+    mean = computeMean(x)
     sum_squares = 0
     n = len(x)
     for i in range(0,n):
@@ -64,7 +65,7 @@ def getCIMean(data, ci_value):
     #np_mean = np.mean(data) #numpy mean
     mean = computeMean(data)
     #np_sem = st.sem(data) #scipy stats standard error mean
-    std_error_mean = computeStdDev(data, mean) / math.sqrt(len(data))
+    std_error_mean = computeStdDev(data) / math.sqrt(len(data))
 
     conf_interval = eta * std_error_mean
 
@@ -94,7 +95,8 @@ def computeMAD(x, mean):
     mad = sum_abs / n
     return mad
 
-def computeGap(x, mean):
+def computeGap(x):
+    mean = computeMean(x)
     mad = computeMAD(x, mean)
     gap = mad / (2 * mean)
     return gap
@@ -147,7 +149,7 @@ def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
             tmp_dataset.append(dataset[random.randrange(0, ds_length, 1)])
         samples_metric.append(globals()[METRIC[metric]](tmp_dataset))
     samples_metric.sort()
-    print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
+    #print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
     return samples_metric[accuracy:(R+1-accuracy)]
 
 def printBootsrapMetric(metric):
@@ -157,6 +159,11 @@ def printBootsrapMetric(metric):
 
 #---------------------------------------------------
 
+def printCIBootstrap(interval):
+    n = len(interval)
+    return [interval[0], interval[n-1]]
+
+
 print("\nExercise 1")
 
 data1 = loadCSV("data_hw1/data_ex1.csv")
@@ -164,14 +171,14 @@ data1 = loadCSV("data_hw1/data_ex1.csv")
 median1 = computeMedian(data1)
 print("\t 1. The Median is", median1)
 start_ci_median, end_ci_median = getCIMedian(data1, 0.95)
-print("\t\tThe 95% CI for the Median is between [", start_ci_median, ",", end_ci_median, "]")
+print("\t\tThe 95% CI for the Median is [", start_ci_median, ",", end_ci_median, "]")
 
 mean1 = computeMean(data1)
 print("\t 2. The Mean is", mean1)
 start_ci_mean1_95, end_ci_mean1_95 = getCIMean(data1, 0.95)
 start_ci_mean1_99, end_ci_mean1_99 = getCIMean(data1, 0.99)
-print("\t\tThe 95% CI for the Mean is between [", start_ci_mean1_95, ",", end_ci_mean1_95, "]")
-print("\t\tThe 99% CI for the Mean is between [", start_ci_mean1_99, ",", end_ci_mean1_99, "]")
+print("\t\tThe 95% CI for the Mean is [", start_ci_mean1_95, ",", end_ci_mean1_95, "]")
+print("\t\tThe 99% CI for the Mean is [", start_ci_mean1_99, ",", end_ci_mean1_99, "]")
 #printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
 print("\n####################")
@@ -180,9 +187,8 @@ print("\n####################")
 print("\nExercise 2")
 data2 = loadCSV("data_hw1/data_ex2.csv")
 
-#print(data2[0])
 start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95 = getCIMean(data2[0], 0.95)
-print("\t 1. The 95% CI for the Mean of data of the first row is between [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
+print("\t 1. The 95% CI for the Mean of data of the first row is [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
 #TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
 num_intervals_ex2 = countIntervals(data2, start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95)
 print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals_ex2)
@@ -194,20 +200,45 @@ print("\nExercise 3")
 
 data3 = loadCSV("data_hw1/data_ex3.csv")
 mean3 = computeMean(data3)
-std_dev3 = computeStdDev(data3, mean3)
+std_dev3 = computeStdDev(data3)
 
 coV3 = computeCov(std_dev3, mean3)
 print("\t 1. The Coefficient of Variation for the data is", coV3)
-gap3 = computeGap(data3, mean3)
+gap3 = computeGap(data3)
 print("\t\tThe Lorenz Curve Gap for the data is", gap3)
 jfi3 = computeJFI(data3)
 print("\t\tThe Jain's fairness index for the data is", jfi3)
 
-print("\t 2. Lorenz Curve Gap plotted")
+print("\t 2. Lorenz Curve Gap plotted!")
 p, l = computeLorenzCurvePoints(data3, mean3)
 printLorenzCurveGap(p, l)
 
-print("\t 3. TODO")
+print("\t 3. Using Bootstrap Algorithm:")
+gap_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='gap')
+jain_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='jain')
+mean_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='mean')
+stddev_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='stddev')
+print("\t\tThe 95% CI for Lorentz curve gap is", printCIBootstrap(gap_bootstrap95))
+print("\t\tThe 95% CI for Jain’s fairness index is", printCIBootstrap(jain_bootstrap95))
+print("\t\tThe 95% CI for the mean of the data is", printCIBootstrap(mean_bootstrap95))
+print("\t\tThe 95% CI for the standard deviation of the data is", printCIBootstrap(stddev_bootstrap95))
+
+print("\t\t----------------------")
+
+gap_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='gap')
+jain_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='jain')
+mean_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='mean')
+stddev_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='stddev')
+print("\t\tThe 99% CI for Lorentz curve gap is", printCIBootstrap(gap_bootstrap99))
+print("\t\tThe 99% CI for Jain’s fairness index is", printCIBootstrap(jain_bootstrap99))
+print("\t\tThe 99% CI for the mean of the data is", printCIBootstrap(mean_bootstrap99))
+print("\t\tThe 99% CI for the standard deviation of the data is", printCIBootstrap(stddev_bootstrap99))
+
+print("\t 4. Using Asymptotic formulas:")
+start_mean3_asymp95, end_mean3_asymp95 = getCIMean(data3, 0.95)
+print("\t\tThe 95% CI for the Mean is [", start_mean3_asymp95, ",", end_mean3_asymp95, "]")
+start_mean3_asymp99, end_mean3_asymp99 = getCIMean(data3, 0.99)
+print("\t\tThe 99% CI for the Mean is [", start_mean3_asymp99, ",", end_mean3_asymp99, "]")
 
 print("\n####################")
 #---------------------------------------------------
