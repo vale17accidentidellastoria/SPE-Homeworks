@@ -73,6 +73,15 @@ def getCIMean(data, ci_value):
 
     return start_int, end_int
 
+def countIntervals(data, i, j):
+    data = data[1:]  # remove the first row
+    num_intervals = 0
+    for x in data:
+        mean = computeMean(x)
+        if (mean >= i) and (mean <= j):
+            num_intervals += 1
+    return num_intervals
+
 def computeCov(std_dev, mean):
     coV = std_dev / mean
     return coV
@@ -175,13 +184,8 @@ data2 = loadCSV("data_hw1/data_ex2.csv")
 start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95 = getCIMean(data2[0], 0.95)
 print("\t 1. The 95% CI for the Mean of data of the first row is between [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
 #TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
-data2 = data2[1:] #remove the first row
-num_intervals = 0
-for x in data2:
-    mean = computeMean(x)
-    if (mean >= start_ci_mean2_firstrow_95) and (mean <= end_ci_mean2_firstrow_95):
-        num_intervals += 1
-print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals)
+num_intervals_ex2 = countIntervals(data2, start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95)
+print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals_ex2)
 
 print("\n####################")
 #---------------------------------------------------
