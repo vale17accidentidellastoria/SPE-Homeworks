@@ -56,9 +56,11 @@ def computeStdDev(x):
 def getCIMedian(data, ci_value):
     eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
     n = len(data)
-    j = int(round(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
-    k = int(round(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
-    return data[j-1], data[k-1]
+    j = int(math.floor(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
+    k = int(math.ceil(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
+    start_int = j+1
+    end_int = k-1
+    return data[start_int-1], data[end_int-1]
 
 def getCIMean(data, ci_value):
     eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
