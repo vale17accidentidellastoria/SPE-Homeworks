@@ -54,6 +54,7 @@ def computeStdDev(x):
     return std_dev
 
 def getCIMedian(data, ci_value):
+    data.sort()
     eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
     n = len(data)
     j = int(math.floor(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
