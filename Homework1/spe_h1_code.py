@@ -8,7 +8,7 @@ import scipy.stats as st
 #---------------------------------------------------
 # Settings
 #---------------------------------------------------
-METRIC = {'median': 'computeMedian', 'mean':'computeMean', 'variance':'computeVar', 'log_mean':'computeLogMean'}
+METRIC = {'median': 'computeMedian', 'mean':'computeMean', 'variance':'computeVar', 'log_mean':'computeLogMean', 'bernoulli':'bernoulliRVBS'}
 #---------------------------------------------------
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
@@ -42,16 +42,6 @@ def computeMean(x):
     for i in range(0,n):
         sum += x[i]
     mean = sum / n
-    return mean
-
-def computeLogMean(x):
-    prod = 1
-    n = len(x)
-    for i in range(0,n):
-        prod *= x[i]
-    mean = prod**(1/n)
-    #if not isinstance(mean, complex):
-        #print('mean:', mean, 'prod:', prod)
     return mean
 
 def computeStdDev(x, mean):
@@ -177,6 +167,29 @@ def exercise2(dataset):
     
     print(counter_mean, "out of 6000 means are inside the CI", ci)
 
+def computeLogMean(x):
+    prod = 1
+    n = len(x)
+    for i in range(0,n):
+        prod *= x[i]
+    mean = prod**(1/n)
+
+    return mean
+
+def bernoulliRV(dataset):
+    counter = 0
+    n = len(dataset)
+    for i in dataset:
+        if i == 1:
+            counter += 1
+    return counter/n, 1 - (counter/n)
+
+def bernoulliRVBS(dataset):
+    return bernoulliRV(dataset)[0]
+
+def bernoulliVar(p):
+    return p(1-p)
+
 #---------------------------------------------------
 
 print("\nExercise 1")
@@ -257,6 +270,19 @@ print("\n####################")
 print("\nExercise 5")
 
 data5 = loadCSV("data_hw1/data_ex5.csv")
+
+p, notp = bernoulliRV(data5)
+print('p is {} and 1-p is {}'.format(p, notp))
+bernoulli_bs_95 = bootstrapAlgorithm(dataset=data5, metric='bernoulli')
+bernoulli_bs_99 = bootstrapAlgorithm(dataset=data5, ci_level=0.99, metric='bernoulli')
+
+print('Bernoulli 95% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_95[0], bernoulli_bs_95[len(bernoulli_bs_95)-1]))
+print('Bernoulli 99% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_99[0], bernoulli_bs_99[len(bernoulli_bs_99)-1]))
+
+dataset5_partial = data5[:15]
+print('dataset5_partial of length {}: {}'.format(len(dataset5_partial), dataset5_partial))
+print('With the rule of three the CI is [{}, {}]'.format(0, 3/len(dataset5_partial)))
+
 
 #solution for Exercise 5
 
