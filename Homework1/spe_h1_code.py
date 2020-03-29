@@ -164,8 +164,6 @@ def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
     samples_metric.append(globals()[METRIC[metric]](dataset))
     R = math.ceil(2 * (accuracy / (1-ci_level))) - 1
 
-    print('bs mean', samples_metric)
-
     for r in range(R):
         tmp_dataset = []
         for i in range(ds_length):
@@ -179,21 +177,6 @@ def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
 def printBootsrapMetric(metric):
     plt.plot(metric, np.zeros_like(metric), '.', linewidth=2.0)
     plt.show()
-
-def exercise2(dataset):
-    # TODO: compute first row CI 95%
-    ci = [3, 10]
-
-    means = []
-    for row in dataset[1:]:
-        means.append(computeMean(row))
-    
-    counter_mean = 0
-    for mean in means:
-        if ci[0] <= mean <= ci[1]:
-            counter_mean += 1
-    
-    print(counter_mean, "out of 6000 means are inside the CI", ci)
 
 def computeLogMean(x):
     prod = 1
@@ -253,10 +236,8 @@ data2 = loadCSV("data_hw1/data_ex2.csv")
 
 start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95 = getCIMean(data2[0], 0.95)
 print("\t 1. The 95% CI for the Mean of data of the first row is [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
-#TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
 num_intervals_ex2 = countIntervals(data2, start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95)
 print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals_ex2)
-
 
 print("\n####################")
 #---------------------------------------------------
@@ -310,29 +291,25 @@ print("\n####################")
 
 print("\nExercise 4")
 
+print("\t 1. Using Bootstrap Algorithm:")
 data4 = loadCSV("data_hw1/data_ex4.csv")
 bs_95 = bootstrapAlgorithm(dataset=data4)
 bs_99 = bootstrapAlgorithm(dataset=data4, ci_level=0.99)
 
-print('95% CI with bootstrap is [{}, {}]'.format(bs_95[0], bs_95[len(bs_95)-1]))
-print('99% CI with bootstrap is [{}, {}]'.format(bs_99[0], bs_99[len(bs_99)-1]))
+print('\t\tThe 95% CI for mean is [{}, {}]'.format(bs_95[0], bs_95[len(bs_95)-1]))
+print('\t\tThe 99% CI for mean is [{}, {}]'.format(bs_99[0], bs_99[len(bs_99)-1]))
 
+print("\t 2. Using Asymptotic formulas:")
 start_ci_mean4_95, end_ci_mean4_95 = getCIMean(data4, 0.95)
 start_ci_mean4_99, end_ci_mean4_99 = getCIMean(data4, 0.99)
 
-print('95% CI with asymptotic formulas is [{}, {}]'.format(start_ci_mean4_95, end_ci_mean4_95))
-print('99% CI with asymptotic formulas is [{}, {}]'.format(start_ci_mean4_99, end_ci_mean4_99))
+print('\t\tThe 95% CI for mean is [{}, {}]'.format(start_ci_mean4_95, end_ci_mean4_95))
+print('\t\tThe 99% CI for mean is [{}, {}]'.format(start_ci_mean4_99, end_ci_mean4_99))
 
+print("\t 3. CI Intervals using log-transformation:")
 log_transformed_data4 = [math.log(x+1) for x in data4]
-print('log transformation', log_transformed_data4[:5])
-for e in log_transformed_data4:
-    if e < 0:
-        print(e)
-log_mean = computeLogMean(log_transformed_data4)
-print('log_mean =', log_mean)
-
 log_bs_95 = bootstrapAlgorithm(dataset=log_transformed_data4, metric='log_mean')
-print('Log mean with 95% CI with bootstrap is [{}, {}]'.format(log_bs_95[0], log_bs_95[len(log_bs_95)-1]))
+print('\t\tThe 95% CI with bootstrap for log transformation mean is [{}, {}]'.format(log_bs_95[0], log_bs_95[len(log_bs_95)-1]))
 
 #printBootsrapMetric()
 
@@ -345,17 +322,17 @@ print("\nExercise 5")
 
 data5 = loadCSV("data_hw1/data_ex5.csv")
 
-p, notp = bernoulliRV(data5)
-print('p is {} and 1-p is {}'.format(p, notp))
+print("\t 1. Probability of Success Using Bootstrap Algorithm:")
 bernoulli_bs_95 = bootstrapAlgorithm(dataset=data5, metric='bernoulli')
 bernoulli_bs_99 = bootstrapAlgorithm(dataset=data5, ci_level=0.99, metric='bernoulli')
 
-print('Bernoulli 95% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_95[0], bernoulli_bs_95[len(bernoulli_bs_95)-1]))
-print('Bernoulli 99% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_99[0], bernoulli_bs_99[len(bernoulli_bs_99)-1]))
+print('\t\tThe 95% Bernoulli CI with bootstrap is [{}, {}]'.format(bernoulli_bs_95[0], bernoulli_bs_95[len(bernoulli_bs_95)-1]))
+print('\t\tThe 99% Bernoulli CI with bootstrap is [{}, {}]'.format(bernoulli_bs_99[0], bernoulli_bs_99[len(bernoulli_bs_99)-1]))
 
+print("\t 2. Finding confidence interval with the Rule of Three:")
 dataset5_partial = data5[:15]
-print('dataset5_partial of length {}: {}'.format(len(dataset5_partial), dataset5_partial))
-print('With the rule of three the CI is [{}, {}]'.format(0, 3/len(dataset5_partial)))
+print('\t\tdataset5_partial of length {}: {}'.format(len(dataset5_partial), dataset5_partial))
+print('\t\tWith the rule of three the CI is [{}, {}]'.format(0, 3/len(dataset5_partial)))
 
 
 #solution for Exercise 5
