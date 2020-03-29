@@ -24,6 +24,13 @@ def loadCSV(csv_file):
             data_points = data_points[0]
     return data_points
 
+def computeEta(ci_value, data, distribution):
+    if distribution == 't':
+        eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    elif distribution == 'normal':
+        eta = st.norm.ppf((1 + ci_value) / 2)
+    return eta
+
 def computeMedian(x):
     median = 0
     x.sort()
@@ -55,7 +62,8 @@ def computeStdDev(x):
 
 def getCIMedian(data, ci_value):
     data.sort()
-    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    eta = computeEta(ci_value, data, 't') # version for t distribution
+    #eta = computeEta(ci_value, data, 'normal') # version for normal distribution
     n = len(data)
     j = int(math.floor(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
     k = int(math.ceil(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
@@ -64,7 +72,9 @@ def getCIMedian(data, ci_value):
     return data[start_int-1], data[end_int-1]
 
 def getCIMean(data, ci_value):
-    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    eta = computeEta(ci_value, data, 't') # version for t distribution
+    #eta = computeEta(ci_value, data, 'normal') # version for normal distribution
+
     #np_mean = np.mean(data) #numpy mean
     mean = computeMean(data)
     #np_sem = st.sem(data) #scipy stats standard error mean
