@@ -8,7 +8,9 @@ import scipy.stats as st
 #---------------------------------------------------
 # Settings
 #---------------------------------------------------
-METRIC = {'median': 'computeMedian', 'mean': 'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev'}
+
+METRIC = {'median': 'computeMedian', 'mean':'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev', 'variance':'computeVar', 'log_mean':'computeLogMean', 'bernoulli':'bernoulliRVBS'}
+
 #---------------------------------------------------
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
@@ -79,13 +81,17 @@ def getCIMean(data, ci_value):
     mean = computeMean(data)
     #np_sem = st.sem(data) #scipy stats standard error mean
     std_error_mean = computeStdDev(data) / math.sqrt(len(data))
-
     conf_interval = eta * std_error_mean
 
     start_int = mean - conf_interval
     end_int = mean + conf_interval
 
     return start_int, end_int
+
+
+def computeVar(x, mean):
+    std_dev = computeStdDev(x, mean)
+    return std_dev**2
 
 def countIntervals(data, i, j):
     data = data[1:]  # remove the first row
@@ -154,13 +160,18 @@ def printLorenzCurveGap(p_points, l_points):
 def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
     ds_length = len(dataset)
     samples_metric = []
+
     samples_metric.append(globals()[METRIC[metric]](dataset))
     R = math.ceil(2 * (accuracy / (1-ci_level))) - 1
+
+    print('bs mean', samples_metric)
+
     for r in range(R):
         tmp_dataset = []
         for i in range(ds_length):
             tmp_dataset.append(dataset[random.randrange(0, ds_length, 1)])
-        samples_metric.append(globals()[METRIC[metric]](tmp_dataset))
+        samples_metric.append(globals()[METRIC[metric]](tmp_dataset)) # load the desired metric function
+
     samples_metric.sort()
     #print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
     return samples_metric[accuracy:(R+1-accuracy)]
@@ -169,6 +180,43 @@ def printBootsrapMetric(metric):
     plt.plot(metric, np.zeros_like(metric), '.', linewidth=2.0)
     plt.show()
 
+def exercise2(dataset):
+    # TODO: compute first row CI 95%
+    ci = [3, 10]
+
+    means = []
+    for row in dataset[1:]:
+        means.append(computeMean(row))
+    
+    counter_mean = 0
+    for mean in means:
+        if ci[0] <= mean <= ci[1]:
+            counter_mean += 1
+    
+    print(counter_mean, "out of 6000 means are inside the CI", ci)
+
+def computeLogMean(x):
+    prod = 1
+    n = len(x)
+    for i in range(0,n):
+        prod *= x[i]
+    mean = prod**(1/n)
+
+    return mean
+
+def bernoulliRV(dataset):
+    counter = 0
+    n = len(dataset)
+    for i in dataset:
+        if i == 1:
+            counter += 1
+    return counter/n, 1 - (counter/n)
+
+def bernoulliRVBS(dataset):
+    return bernoulliRV(dataset)[0]
+
+def bernoulliVar(p):
+    return p(1-p)
 
 #---------------------------------------------------
 
@@ -188,12 +236,14 @@ start_ci_median, end_ci_median = getCIMedian(data1, 0.95)
 print("\t\tThe 95% CI for the Median is [", start_ci_median, ",", end_ci_median, "]")
 
 mean1 = computeMean(data1)
+
 print("\t 2. The Mean is", mean1)
 start_ci_mean1_95, end_ci_mean1_95 = getCIMean(data1, 0.95)
 start_ci_mean1_99, end_ci_mean1_99 = getCIMean(data1, 0.99)
 print("\t\tThe 95% CI for the Mean is [", start_ci_mean1_95, ",", end_ci_mean1_95, "]")
 print("\t\tThe 99% CI for the Mean is [", start_ci_mean1_99, ",", end_ci_mean1_99, "]")
 #printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
+
 
 print("\n####################")
 #---------------------------------------------------
@@ -206,6 +256,7 @@ print("\t 1. The 95% CI for the Mean of data of the first row is [", start_ci_me
 #TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
 num_intervals_ex2 = countIntervals(data2, start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95)
 print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals_ex2)
+
 
 print("\n####################")
 #---------------------------------------------------
@@ -260,6 +311,30 @@ print("\n####################")
 print("\nExercise 4")
 
 data4 = loadCSV("data_hw1/data_ex4.csv")
+bs_95 = bootstrapAlgorithm(dataset=data4)
+bs_99 = bootstrapAlgorithm(dataset=data4, ci_level=0.99)
+
+print('95% CI with bootstrap is [{}, {}]'.format(bs_95[0], bs_95[len(bs_95)-1]))
+print('99% CI with bootstrap is [{}, {}]'.format(bs_99[0], bs_99[len(bs_99)-1]))
+
+start_ci_mean4_95, end_ci_mean4_95 = getCIMean(data4, 0.95)
+start_ci_mean4_99, end_ci_mean4_99 = getCIMean(data4, 0.99)
+
+print('95% CI with asymptotic formulas is [{}, {}]'.format(start_ci_mean4_95, end_ci_mean4_95))
+print('99% CI with asymptotic formulas is [{}, {}]'.format(start_ci_mean4_99, end_ci_mean4_99))
+
+log_transformed_data4 = [math.log(x+1) for x in data4]
+print('log transformation', log_transformed_data4[:5])
+for e in log_transformed_data4:
+    if e < 0:
+        print(e)
+log_mean = computeLogMean(log_transformed_data4)
+print('log_mean =', log_mean)
+
+log_bs_95 = bootstrapAlgorithm(dataset=log_transformed_data4, metric='log_mean')
+print('Log mean with 95% CI with bootstrap is [{}, {}]'.format(log_bs_95[0], log_bs_95[len(log_bs_95)-1]))
+
+#printBootsrapMetric()
 
 #solution for Exercise 4
 
@@ -269,6 +344,19 @@ print("\n####################")
 print("\nExercise 5")
 
 data5 = loadCSV("data_hw1/data_ex5.csv")
+
+p, notp = bernoulliRV(data5)
+print('p is {} and 1-p is {}'.format(p, notp))
+bernoulli_bs_95 = bootstrapAlgorithm(dataset=data5, metric='bernoulli')
+bernoulli_bs_99 = bootstrapAlgorithm(dataset=data5, ci_level=0.99, metric='bernoulli')
+
+print('Bernoulli 95% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_95[0], bernoulli_bs_95[len(bernoulli_bs_95)-1]))
+print('Bernoulli 99% CI with bootstrap is [{}, {}]'.format(bernoulli_bs_99[0], bernoulli_bs_99[len(bernoulli_bs_99)-1]))
+
+dataset5_partial = data5[:15]
+print('dataset5_partial of length {}: {}'.format(len(dataset5_partial), dataset5_partial))
+print('With the rule of three the CI is [{}, {}]'.format(0, 3/len(dataset5_partial)))
+
 
 #solution for Exercise 5
 
