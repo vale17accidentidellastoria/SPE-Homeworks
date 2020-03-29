@@ -8,7 +8,9 @@ import scipy.stats as st
 #---------------------------------------------------
 # Settings
 #---------------------------------------------------
-METRIC = {'median': 'computeMedian', 'mean':'computeMean', 'variance':'computeVar', 'log_mean':'computeLogMean', 'bernoulli':'bernoulliRVBS'}
+
+METRIC = {'median': 'computeMedian', 'mean':'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev', 'variance':'computeVar', 'log_mean':'computeLogMean', 'bernoulli':'bernoulliRVBS'}
+
 #---------------------------------------------------
 def loadCSV(csv_file):
     dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
@@ -17,12 +19,19 @@ def loadCSV(csv_file):
     column_dim = dataset.shape[1] #save the number of columns
     row_dim = dataset.shape[0] #save the number of columns
     if (column_dim == 1): #check if we have data organized in a single column
-        data_points = dataset[0].values.tolist() #convert the values of the column into a list of values 
+        data_points = dataset[0].values.tolist() #convert the values of the column into a list of values
     elif (column_dim > 1): #check if data is expressed as a matrix of values (multiple columns)
         data_points = dataset.values.tolist()
         if(row_dim == 1): #check if data is expressed as a single row
             data_points = data_points[0]
     return data_points
+
+def computeEta(ci_value, data, distribution):
+    if distribution == 't':
+        eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    elif distribution == 'normal':
+        eta = st.norm.ppf((1 + ci_value) / 2)
+    return eta
 
 def computeMedian(x):
     median = 0
@@ -37,36 +46,41 @@ def computeMedian(x):
     return median
 
 def computeMean(x):
-    sum = 0
+    sum_x = 0
     n = len(x)
     for i in range(0,n):
-        sum += x[i]
-    mean = sum / n
+        sum_x += x[i]
+    mean = sum_x / n
     return mean
 
-def computeStdDev(x, mean):
+def computeStdDev(x):
+    mean = computeMean(x)
     sum_squares = 0
     n = len(x)
     for i in range(0,n):
         sum_squares += pow((x[i] - mean), 2)
-    std_dev = math.sqrt(sum_squares / (n -1)) #divide by n or (n-1)??
+    std_dev = math.sqrt(sum_squares / (n - 1))
     return std_dev
 
 def getCIMedian(data, ci_value):
-    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
+    data.sort()
+    eta = computeEta(ci_value, data, 't') # version for t distribution
+    #eta = computeEta(ci_value, data, 'normal') # version for normal distribution
     n = len(data)
-    j = int(round(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
-    k = int(round(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
-    return data[j-1], data[k-1]
+    j = int(math.floor(0.5*n - eta*math.sqrt(0.5*n*(1-0.5))))
+    k = int(math.ceil(0.5*n + eta*math.sqrt(0.5*n*(1-0.5)))) + 1
+    start_int = j+1
+    end_int = k-1
+    return data[start_int-1], data[end_int-1]
 
 def getCIMean(data, ci_value):
-    eta = st.t.ppf((1 + ci_value) / 2, len(data) - 1)
-    print(eta)
+    eta = computeEta(ci_value, data, 't') # version for t distribution
+    #eta = computeEta(ci_value, data, 'normal') # version for normal distribution
+
     #np_mean = np.mean(data) #numpy mean
     mean = computeMean(data)
-    
     #np_sem = st.sem(data) #scipy stats standard error mean
-    std_error_mean = computeStdDev(data, mean) / math.sqrt(len(data))
+    std_error_mean = computeStdDev(data) / math.sqrt(len(data))
     conf_interval = eta * std_error_mean
 
     start_int = mean - conf_interval
@@ -74,9 +88,19 @@ def getCIMean(data, ci_value):
 
     return start_int, end_int
 
+
 def computeVar(x, mean):
     std_dev = computeStdDev(x, mean)
     return std_dev**2
+
+def countIntervals(data, i, j):
+    data = data[1:]  # remove the first row
+    num_intervals = 0
+    for x in data:
+        mean = computeMean(x)
+        if (mean >= i) and (mean <= j):
+            num_intervals += 1
+    return num_intervals
 
 def computeCov(std_dev, mean):
     coV = std_dev / mean
@@ -90,7 +114,8 @@ def computeMAD(x, mean):
     mad = sum_abs / n
     return mad
 
-def computeGap(x, mean):
+def computeGap(x):
+    mean = computeMean(x)
     mad = computeMAD(x, mean)
     gap = mad / (2 * mean)
     return gap
@@ -106,21 +131,24 @@ def computeJFI(x):
     jfi = pow(sum1, 2) / (n * sum2)
     return jfi
 
-def computeLorenzCurvePoints(x, mean, p, l): #TODO: check if the function is really correct! 
+def computeLorenzCurvePoints(x, mean):
+    p_gap = []
+    l_gap = []
     x.sort()
     n = len(x)
-    for i in range(1,n+1):
-        p.append(i / n)
-        sum = 0
+    for i in range(1, n+1):
+        p_gap.append(i / n)
+        sum_x = 0
         for i2 in range(0,i):
-            sum += x[i2]
-        l.append(sum / (mean * n))
+            sum_x += x[i2]
+        l_gap.append(sum_x / (mean * n))
+    return p_gap, l_gap
 
-def printLorenzCurveGap(p, l):
-    plt.plot(p, l, linewidth=2.0)
+def printLorenzCurveGap(p_points, l_points):
+    plt.plot(p_points, l_points, linewidth=2.0)
     y_lim = plt.ylim()
     x_lim = plt.xlim()
-    plt.plot(x_lim, y_lim, 'k-', color = 'r', linewidth=1.0)
+    plt.plot(x_lim, y_lim, 'k-', color='r', linewidth=1.0)
     plt.ylim(y_lim)
     plt.xlim(x_lim)
     plt.show()
@@ -145,7 +173,7 @@ def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
         samples_metric.append(globals()[METRIC[metric]](tmp_dataset)) # load the desired metric function
 
     samples_metric.sort()
-    print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
+    #print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
     return samples_metric[accuracy:(R+1-accuracy)]
 
 def printBootsrapMetric(metric):
@@ -192,13 +220,29 @@ def bernoulliVar(p):
 
 #---------------------------------------------------
 
+def printCIBootstrap(interval):
+    n = len(interval)
+    output = "[ " + str(interval[0]) + ", " + str(interval[n-1]) + " ]"
+    return output
+
+
 print("\nExercise 1")
 
 data1 = loadCSV("data_hw1/data_ex1.csv")
+
 median1 = computeMedian(data1)
-print("\t The Median is", median1)
+print("\t 1. The Median is", median1)
+start_ci_median, end_ci_median = getCIMedian(data1, 0.95)
+print("\t\tThe 95% CI for the Median is [", start_ci_median, ",", end_ci_median, "]")
+
 mean1 = computeMean(data1)
-print("\t The Mean is", mean1)
+
+print("\t 2. The Mean is", mean1)
+start_ci_mean1_95, end_ci_mean1_95 = getCIMean(data1, 0.95)
+start_ci_mean1_99, end_ci_mean1_99 = getCIMean(data1, 0.99)
+print("\t\tThe 95% CI for the Mean is [", start_ci_mean1_95, ",", end_ci_mean1_95, "]")
+print("\t\tThe 99% CI for the Mean is [", start_ci_mean1_99, ",", end_ci_mean1_99, "]")
+#printBootsrapMetric(bootstrapAlgorithm(dataset=data1, metric='median'))
 
 
 print("\n####################")
@@ -207,7 +251,12 @@ print("\n####################")
 print("\nExercise 2")
 data2 = loadCSV("data_hw1/data_ex2.csv")
 
-exercise2(data2)
+start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95 = getCIMean(data2[0], 0.95)
+print("\t 1. The 95% CI for the Mean of data of the first row is [", start_ci_mean2_firstrow_95, ",", end_ci_mean2_firstrow_95, "]")
+#TODO: for Alberto: review my suggested solution (below) for Ex2 point 2
+num_intervals_ex2 = countIntervals(data2, start_ci_mean2_firstrow_95, end_ci_mean2_firstrow_95)
+print("\t 2. The number of Means that fall inside the Confidence Interval computed for the first row is", num_intervals_ex2)
+
 
 print("\n####################")
 #---------------------------------------------------
@@ -216,20 +265,45 @@ print("\nExercise 3")
 
 data3 = loadCSV("data_hw1/data_ex3.csv")
 mean3 = computeMean(data3)
-std_dev3 = computeStdDev(data3, mean3)
+std_dev3 = computeStdDev(data3)
 
 coV3 = computeCov(std_dev3, mean3)
-print("\t The Coefficient of Variation for the data is", coV3)
-gap3 = computeGap(data3, mean3)
-print("\t The Lorenz Curve Gap for the data is", gap3)
+print("\t 1. The Coefficient of Variation for the data is", coV3)
+gap3 = computeGap(data3)
+print("\t\tThe Lorenz Curve Gap for the data is", gap3)
 jfi3 = computeJFI(data3)
-print("\t The Jain's fairness index for the data is", jfi3)
+print("\t\tThe Jain's fairness index for the data is", jfi3)
 
-p = []
-l = []
-computeLorenzCurvePoints(data3, mean3, p, l)
-printLorenzCurveGap(p,l)
+print("\t 2. Lorenz Curve Gap plotted!")
+p, l = computeLorenzCurvePoints(data3, mean3)
+printLorenzCurveGap(p, l)
 
+print("\t 3. Using Bootstrap Algorithm:")
+gap_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='gap')
+jain_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='jain')
+mean_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='mean')
+stddev_bootstrap95 = bootstrapAlgorithm(dataset=data3, ci_level=0.95, metric='stddev')
+print("\t\tThe 95% CI for Lorentz curve gap is", printCIBootstrap(gap_bootstrap95))
+print("\t\tThe 95% CI for Jain’s fairness index is", printCIBootstrap(jain_bootstrap95))
+print("\t\tThe 95% CI for the mean of the data is", printCIBootstrap(mean_bootstrap95))
+print("\t\tThe 95% CI for the standard deviation of the data is", printCIBootstrap(stddev_bootstrap95))
+
+print("\t\t----------------------")
+
+gap_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='gap')
+jain_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='jain')
+mean_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='mean')
+stddev_bootstrap99 = bootstrapAlgorithm(dataset=data3, ci_level=0.99, metric='stddev')
+print("\t\tThe 99% CI for Lorentz curve gap is", printCIBootstrap(gap_bootstrap99))
+print("\t\tThe 99% CI for Jain’s fairness index is", printCIBootstrap(jain_bootstrap99))
+print("\t\tThe 99% CI for the mean of the data is", printCIBootstrap(mean_bootstrap99))
+print("\t\tThe 99% CI for the standard deviation of the data is", printCIBootstrap(stddev_bootstrap99))
+
+print("\t 4. Using Asymptotic formulas:")
+start_mean3_asymp95, end_mean3_asymp95 = getCIMean(data3, 0.95)
+print("\t\tThe 95% CI for the Mean is [", start_mean3_asymp95, ",", end_mean3_asymp95, "]")
+start_mean3_asymp99, end_mean3_asymp99 = getCIMean(data3, 0.99)
+print("\t\tThe 99% CI for the Mean is [", start_mean3_asymp99, ",", end_mean3_asymp99, "]")
 
 print("\n####################")
 #---------------------------------------------------
