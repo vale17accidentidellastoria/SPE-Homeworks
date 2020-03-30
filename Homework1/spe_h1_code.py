@@ -311,6 +311,19 @@ log_transformed_data4 = [math.log(x+1) for x in data4]
 log_bs_95 = bootstrapAlgorithm(dataset=log_transformed_data4, metric='log_mean')
 print('\t\tThe 95% CI with bootstrap for log transformation mean is [{}, {}]'.format(log_bs_95[0], log_bs_95[len(log_bs_95)-1]))
 
+'''
+# matplotlib histogram
+plt.hist(data4, color = 'blue', edgecolor = 'black', bins = 20)
+
+# Add labels
+plt.title('Histogram of Data4')
+plt.xlabel('density')
+plt.ylabel('values')
+plt.show()
+
+printBootsrapMetric(bs_95)
+'''
+
 #printBootsrapMetric()
 
 #solution for Exercise 4
@@ -322,10 +335,12 @@ print("\nExercise 5")
 
 data5 = loadCSV("data_hw1/data_ex5.csv")
 
-print("\t 1. Probability of Success Using Bootstrap Algorithm:")
+print("\t 1. Probability of Success and CI Using Bootstrap Algorithm:")
+p, notp = bernoulliRV(data5)
 bernoulli_bs_95 = bootstrapAlgorithm(dataset=data5, metric='bernoulli')
 bernoulli_bs_99 = bootstrapAlgorithm(dataset=data5, ci_level=0.99, metric='bernoulli')
 
+print('\t\tThe probability of success is {}.'.format(p))
 print('\t\tThe 95% Bernoulli CI with bootstrap is [{}, {}]'.format(bernoulli_bs_95[0], bernoulli_bs_95[len(bernoulli_bs_95)-1]))
 print('\t\tThe 99% Bernoulli CI with bootstrap is [{}, {}]'.format(bernoulli_bs_99[0], bernoulli_bs_99[len(bernoulli_bs_99)-1]))
 
