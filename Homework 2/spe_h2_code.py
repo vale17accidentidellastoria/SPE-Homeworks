@@ -29,7 +29,7 @@ def computeBins(data):
 
 def plotHistogram(data, print_distr=False):
     bins_hist = computeBins(data)
-    plt.hist(data2, bins=bins_hist)
+    plt.hist(data, bins=bins_hist)
     plt.show()
 
 
