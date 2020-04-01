@@ -18,3 +18,26 @@ def loadCSV(csv_file): #TODO: Remember to modify it according to data of exercis
         if(row_dim == 1): #check if data is expressed as a single row
             data_points = data_points[0]
     return data_points
+
+def computeBins(data):
+    """ Computes the necessary number of bins for the histogram according to the input data """
+    num_observation = len(data)  # the number of observations
+    data_range = max(data) - min(data)  # range is the differene between minimum value and maximum value
+    num_intervals = int(round(math.sqrt(num_observation)))
+    binwidth = data_range / num_intervals
+    return np.arange(min(data2), max(data2) + binwidth, binwidth)
+
+def plotHistogram(data, print_distr=False):
+    bins_hist = computeBins(data)
+    plt.hist(data2, bins=bins_hist)
+    plt.show()
+
+
+#--------------------------------------------
+
+
+#Exercise 2
+data2 = loadCSV("data_hw2/data_ex2.csv")
+
+plotHistogram(data2, print_distr=False)
+
