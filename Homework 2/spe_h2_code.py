@@ -22,10 +22,10 @@ def loadCSV(csv_file): #TODO: Remember to modify it according to data of exercis
 def computeBins(data):
     """ Computes the necessary number of bins for the histogram according to the input data """
     num_observation = len(data)  # the number of observations
-    data_range = max(data) - min(data)  # range is the differene between minimum value and maximum value
+    data_range = max(data) - min(data)  # range is the difference between minimum value and maximum value
     num_intervals = int(round(math.sqrt(num_observation)))
     binwidth = data_range / num_intervals
-    return np.arange(min(data2), max(data2) + binwidth, binwidth)
+    return np.arange(min(data), max(data) + binwidth, binwidth)
 
 def plotHistogram(data, print_distr=False):
     bins_hist = computeBins(data)
@@ -40,4 +40,14 @@ def plotHistogram(data, print_distr=False):
 data2 = loadCSV("data_hw2/data_ex2.csv")
 
 plotHistogram(data2, print_distr=False)
+
+
+
+#Exercise 4
+data4 = [[2, 1], [3, 4], [4, 2], [5, 7], [6, 10], [7, 9], [8, 9], [9, 14], [10, 7], [11, 5], [12, 3]]
+num_occurrences = []
+for i in range(0, len(data4)):
+    num_occurrences.append(data4[i][1])
+
+plotHistogram(num_occurrences, print_distr=False)
 
