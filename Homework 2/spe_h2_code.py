@@ -28,9 +28,9 @@ def computeBins(data):
     binwidth = data_range / num_intervals
     return np.arange(min(data), max(data) + binwidth, binwidth)
 
-def plotHistogram(data):
+def plotHistogram(data, d=False):
     bins_hist = computeBins(data)
-    plt.hist(data, bins=bins_hist, density=True)
+    plt.hist(data, bins=bins_hist, density=d)
     plt.show()
 
 def plotPDFsOnHistogram(data, mu_gauss, sigma_gauss):
@@ -57,6 +57,10 @@ def plotPDFsOnHistogram(data, mu_gauss, sigma_gauss):
 
     plt.show()
 
+def plotBarDiagram(items, probs):
+    plt.bar(items, probs, width=0.2)
+    plt.show()
+
 def align_yaxis(ax1, v1, ax2, v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1"""
     _, y1 = ax1.transData.transform((0, v1))
@@ -69,7 +73,7 @@ def align_yaxis(ax1, v1, ax2, v2):
 def EMalgorithm(data, n, update_prior_belief=False):
     num_iterations = 100
     d_length = len(data)
-    p_gauss, mu_gauss, sigma_gauss = setPriorBelief(n)
+    p_gauss, mu_gauss, sigma_gauss = setPriorBelief()
     for i in range(0, num_iterations):
         if (i >= 1) and update_prior_belief:
             p_gauss = updatePriorBelief(gauss, d_length, n)
@@ -79,7 +83,7 @@ def EMalgorithm(data, n, update_prior_belief=False):
 
     return mu_gauss, sigma_gauss
 
-def setPriorBelief(n):
+def setPriorBelief():
     m = np.array([1/3, 1/3, 1/3])  # We deal with three distributions
     p_gauss = m / np.sum(m)
     mu_gauss = [5, -4, 2]
@@ -119,6 +123,17 @@ def runMaximizationStep(data, n, gauss, mu_gauss, sigma_gauss):
 
     return mu_gauss, sigma_gauss
 
+def extractItemsProbs(data):
+    items = []
+    num_occurrences = []
+    probs = []
+    for i in range(0, len(data)):
+        items.append(data[i][0])
+    for i in range(0, len(data)):
+        num_occurrences.append(data[i][1])
+    for i in range(0, len(num_occurrences)):
+        probs.append(num_occurrences[i]/np.sum(num_occurrences))
+    return items, probs
 
 #--------------------------------------------
 
@@ -127,23 +142,35 @@ def runMaximizationStep(data, n, gauss, mu_gauss, sigma_gauss):
 data2 = loadCSV("data_hw2/data_ex2.csv")
 NUM_GAUSS = 3
 
-plotHistogram(data2)
+plotHistogram(data2, d=False)
+
+print("\nExercise 2")
 
 mu_gauss, sigma_gauss = EMalgorithm(data2, NUM_GAUSS, update_prior_belief=False)
 plotPDFsOnHistogram(data2, mu_gauss, sigma_gauss)
-print("The means for the 3 Gaussians distributions are:", mu_gauss)
-print("The standard deviations for the 3 Gaussians distributions are:", sigma_gauss)
+print("\t\tThe means for the 3 Gaussians distributions are:", mu_gauss)
+print("\t\tThe standard deviations for the 3 Gaussians distributions are:", sigma_gauss)
+
+print("----------------------")
 
 mu_gauss_up_prior, sigma_gauss_up_prior = EMalgorithm(data2, NUM_GAUSS, update_prior_belief=True)
 plotPDFsOnHistogram(data2, mu_gauss_up_prior, sigma_gauss_up_prior)
-print("The means for the 3 Gaussians distributions (with prior update) are:", mu_gauss_up_prior)
-print("The standard deviations for the 3 Gaussians distributions (with prior update) are:", sigma_gauss_up_prior)
+print("\t\tThe means for the 3 Gaussians distributions (with prior update) are:", mu_gauss_up_prior)
+print("\t\tThe standard deviations for the 3 Gaussians distributions (with prior update) are:", sigma_gauss_up_prior)
+
+print("\n####################")
+
+#--------------------------------------------
 
 #Exercise 4
 data4 = [[2, 1], [3, 4], [4, 2], [5, 7], [6, 10], [7, 9], [8, 9], [9, 14], [10, 7], [11, 5], [12, 3]]
-num_occurrences = []
-for i in range(0, len(data4)):
-    num_occurrences.append(data4[i][1])
+items, probs = extractItemsProbs(data4)
 
-#plotHistogram(num_occurrences, print_distr=False)
+print("\nExercise 4")
+
+plotBarDiagram(items, probs)
+
+print("\n####################")
+
+#--------------------------------------------
 
