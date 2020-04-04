@@ -6,19 +6,21 @@ import matplotlib.mlab as mlab
 import random
 import scipy.stats as st
 
-def loadCSV(csv_file): #TODO: Remember to modify it according to data of exercise 2
-    dataset = pd.read_csv(csv_file, header=None) #here we are working with Pandas DataFrame
-    #print(dataset.shape)
+
+def loadCSV(csv_file):  # TODO: Remember to modify it according to data of exercise 2
+    dataset = pd.read_csv(csv_file, header=None)  # here we are working with Pandas DataFrame
+    # print(dataset.shape)
     data_points = []
-    column_dim = dataset.shape[1] #save the number of columns
-    row_dim = dataset.shape[0] #save the number of columns
-    if (column_dim == 1): #check if we have data organized in a single column
-        data_points = dataset[0].values.tolist() #convert the values of the column into a list of values
-    elif (column_dim > 1): #check if data is expressed as a matrix of values (multiple columns)
+    column_dim = dataset.shape[1]  # save the number of columns
+    row_dim = dataset.shape[0]  # save the number of columns
+    if (column_dim == 1):  # check if we have data organized in a single column
+        data_points = dataset[0].values.tolist()  # convert the values of the column into a list of values
+    elif (column_dim > 1):  # check if data is expressed as a matrix of values (multiple columns)
         data_points = dataset.values.tolist()
-        if(row_dim == 1): #check if data is expressed as a single row
+        if (row_dim == 1):  # check if data is expressed as a single row
             data_points = data_points[0]
     return data_points
+
 
 def computeBins(data):
     """ Computes the necessary number of bins for the histogram according to the input data """
@@ -28,10 +30,12 @@ def computeBins(data):
     binwidth = data_range / num_intervals
     return np.arange(min(data), max(data) + binwidth, binwidth)
 
+
 def plotHistogram(data, d=False):
     bins_hist = computeBins(data)
     plt.hist(data, bins=bins_hist, density=d)
     plt.show()
+
 
 def plotPDFsOnHistogram(data, mu_gauss, sigma_gauss):
     fig = plt.figure()
@@ -41,6 +45,8 @@ def plotPDFsOnHistogram(data, mu_gauss, sigma_gauss):
     ax1.hist(data, bins=bins_hist, density=True, alpha=0.8, color='g')
 
     ax2 = ax1.twinx()
+
+    plt.yticks([])
 
     xmin, xmax = plt.xlim()
     x = np.linspace(xmin, xmax, 100)
@@ -57,9 +63,11 @@ def plotPDFsOnHistogram(data, mu_gauss, sigma_gauss):
 
     plt.show()
 
+
 def plotBarDiagram(items, probs):
     plt.bar(items, probs, width=0.2)
     plt.show()
+
 
 def align_yaxis(ax1, v1, ax2, v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1"""
@@ -69,6 +77,7 @@ def align_yaxis(ax1, v1, ax2, v2):
     _, dy = inv.transform((0, 0)) - inv.transform((0, y1 - y2))
     miny, maxy = ax2.get_ylim()
     ax2.set_ylim(miny + dy, maxy + dy)
+
 
 def EMalgorithm(data, n, update_prior_belief=False):
     num_iterations = 100
@@ -83,18 +92,21 @@ def EMalgorithm(data, n, update_prior_belief=False):
 
     return mu_gauss, sigma_gauss
 
+
 def setPriorBelief():
-    m = np.array([1/3, 1/3, 1/3])  # We deal with three distributions
+    m = np.array([1 / 3, 1 / 3, 1 / 3])  # We deal with three distributions
     p_gauss = m / np.sum(m)
     mu_gauss = [5, -4, 2]
     sigma_gauss = [4, 3, 6]
     return p_gauss, mu_gauss, sigma_gauss
 
+
 def updatePriorBelief(gauss, length, n):
     p_g = []
-    for i in range(0,n):
+    for i in range(0, n):
         p_g.append(np.sum(gauss[i]) / length)
     return p_g
+
 
 def runExpectationStep(data, n, mu_gauss, sigma_gauss):
     p_x_gauss = []
@@ -102,18 +114,20 @@ def runExpectationStep(data, n, mu_gauss, sigma_gauss):
         p_x_gauss.append(st.norm.pdf(data, loc=mu_gauss[i], scale=sigma_gauss[i]))
     return p_x_gauss
 
+
 def setPosteriorBelief(len_data, p_gauss, p_x_gauss):
     gauss1 = []
     gauss2 = []
     gauss3 = []
 
     for i in range(0, len_data):
-        den = (p_x_gauss[0][i]*p_gauss[0] + p_x_gauss[1][i]*p_gauss[1] + p_x_gauss[2][i]*p_gauss[2])
-        gauss1.append((p_x_gauss[0][i]*p_gauss[0]) / den)
-        gauss2.append((p_x_gauss[1][i]*p_gauss[1]) / den)
-        gauss3.append((p_x_gauss[2][i]*p_gauss[2]) / den)
+        den = (p_x_gauss[0][i] * p_gauss[0] + p_x_gauss[1][i] * p_gauss[1] + p_x_gauss[2][i] * p_gauss[2])
+        gauss1.append((p_x_gauss[0][i] * p_gauss[0]) / den)
+        gauss2.append((p_x_gauss[1][i] * p_gauss[1]) / den)
+        gauss3.append((p_x_gauss[2][i] * p_gauss[2]) / den)
 
     return [gauss1, gauss2, gauss3]
+
 
 def runMaximizationStep(data, n, gauss, mu_gauss, sigma_gauss):
     for i in range(0, n):
@@ -122,6 +136,7 @@ def runMaximizationStep(data, n, gauss, mu_gauss, sigma_gauss):
         sigma_gauss[i] = math.sqrt(np.sum(np.multiply(gauss[i], np.power(diff, 2))) / np.sum(gauss[i]))
 
     return mu_gauss, sigma_gauss
+
 
 def extractItemsProbs(data):
     items = []
@@ -132,13 +147,43 @@ def extractItemsProbs(data):
     for i in range(0, len(data)):
         num_occurrences.append(data[i][1])
     for i in range(0, len(num_occurrences)):
-        probs.append(num_occurrences[i]/np.sum(num_occurrences))
-    return items, probs
-
-#--------------------------------------------
+        probs.append(num_occurrences[i] / np.sum(num_occurrences))
+    return items, probs, num_occurrences
 
 
-#Exercise 2
+def setProbTriangularDistr(items):
+    probs = []
+    for k in range(0, len(items) + 2):
+        if 2 <= k <= 7:
+            probs.append((k - 1) / 36)
+        elif 8 <= k <= 12:
+            probs.append((13 - k) / 36)
+    return probs
+
+
+def runChiSquaredTest(samples, pr):
+    sample_size_n = np.sum(samples)
+    test_statistic = 0
+    alpha = 0.05
+
+    for i in range(0, len(samples)):
+        test_statistic += ((pow((samples[i] - sample_size_n*probs_2[i]), 2)) / (sample_size_n*pr[i]))
+    degrees_of_freedom = len(samples) - 1
+    p_value = 1 - st.chi2.cdf(test_statistic, degrees_of_freedom)
+
+    if p_value < alpha:
+        chi_res = False
+    else:
+        chi_res = True
+
+    return test_statistic, p_value, chi_res, alpha
+
+
+
+# --------------------------------------------
+
+
+# Exercise 2
 data2 = loadCSV("data_hw2/data_ex2.csv")
 NUM_GAUSS = 3
 
@@ -148,29 +193,47 @@ print("\nExercise 2")
 
 mu_gauss, sigma_gauss = EMalgorithm(data2, NUM_GAUSS, update_prior_belief=False)
 plotPDFsOnHistogram(data2, mu_gauss, sigma_gauss)
-print("\t\tThe means for the 3 Gaussians distributions are:", mu_gauss)
+print("\t 1. The means for the 3 Gaussians distributions are:", mu_gauss)
 print("\t\tThe standard deviations for the 3 Gaussians distributions are:", sigma_gauss)
 
-print("----------------------")
+print("\t\t----------------------")
 
 mu_gauss_up_prior, sigma_gauss_up_prior = EMalgorithm(data2, NUM_GAUSS, update_prior_belief=True)
 plotPDFsOnHistogram(data2, mu_gauss_up_prior, sigma_gauss_up_prior)
 print("\t\tThe means for the 3 Gaussians distributions (with prior update) are:", mu_gauss_up_prior)
 print("\t\tThe standard deviations for the 3 Gaussians distributions (with prior update) are:", sigma_gauss_up_prior)
 
+print("\t 2. Histograms with PDFs of Gaussians plotted!")
+
 print("\n####################")
 
-#--------------------------------------------
+# --------------------------------------------
 
-#Exercise 4
+# Exercise 4
 data4 = [[2, 1], [3, 4], [4, 2], [5, 7], [6, 10], [7, 9], [8, 9], [9, 14], [10, 7], [11, 5], [12, 3]]
-items, probs = extractItemsProbs(data4)
+items, probs_1, num_occurrences = extractItemsProbs(data4)
 
 print("\nExercise 4")
 
-plotBarDiagram(items, probs)
+print("\t 1. The PMF of the distribution is")
+for i in range(0, len(items)):
+    print("\t\tP[ X =", items[i], "] =", probs_1[i])
+
+plotBarDiagram(items, probs_1)
+
+probs_2 = setProbTriangularDistr(items)
+
+T, p_value, chi_result, alpha = runChiSquaredTest(num_occurrences, probs_2)
+print("\t 2. The test statistic T is", T)
+print("\t\tThe pvalue is", p_value)
+
+if chi_result:
+    print("\t\tpvalue", p_value, ">", alpha, ": The null hypothesis should NOT be rejected!")
+else:
+    print("\t\tpvalue", p_value, "<", alpha, ": The null hypothesis should be rejected!")
+
+plotBarDiagram(items, probs_2)
 
 print("\n####################")
 
-#--------------------------------------------
-
+# --------------------------------------------
