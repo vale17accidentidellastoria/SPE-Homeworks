@@ -69,6 +69,19 @@ def plotBarDiagram(items, probs):
     plt.show()
 
 
+def plotHistogramExp(exp_rv):
+    mybins = computeBins(exp_rv)
+    plt.hist(exp_rv, bins=mybins, density=True)
+    P = st.expon.fit(exp_rv)
+
+    xmin, xmax = plt.xlim()
+    x = np.linspace(xmin, xmax, 100)
+    rP = st.expon.pdf(x, *P)
+
+    plt.plot(x, rP)
+    plt.show()
+
+
 def align_yaxis(ax1, v1, ax2, v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1"""
     _, y1 = ax1.transData.transform((0, v1))
@@ -167,7 +180,7 @@ def runChiSquaredTest(samples, pr):
     alpha = 0.05
 
     for i in range(0, len(samples)):
-        test_statistic += ((pow((samples[i] - sample_size_n*probs_2[i]), 2)) / (sample_size_n*pr[i]))
+        test_statistic += ((pow((samples[i] - sample_size_n * probs_2[i]), 2)) / (sample_size_n * pr[i]))
     degrees_of_freedom = len(samples) - 1
     p_value = 1 - st.chi2.cdf(test_statistic, degrees_of_freedom)
 
@@ -178,6 +191,18 @@ def runChiSquaredTest(samples, pr):
 
     return test_statistic, p_value, chi_res, alpha
 
+
+def generateExpRV(exp_lambda):
+    U = random.uniform(0, 1)
+    x = - (math.log(U) / exp_lambda)
+    return x
+
+
+def runCDFInversion(N, avg_lambda):
+    rvs_exp = []
+    for i in range(0, N):
+        rvs_exp.append(generateExpRV(avg_lambda))
+    return rvs_exp
 
 
 # --------------------------------------------
@@ -235,5 +260,23 @@ else:
 plotBarDiagram(items, probs_2)
 
 print("\n####################")
+
+
+# --------------------------------------------
+
+# Exercise 6
+
+N_tr = 1000
+avg_lambda = 2
+exp_rv = runCDFInversion(N_tr, avg_lambda)
+
+print("\nExercise 6")
+
+plotHistogramExp(exp_rv)
+
+print("\t 1. Histogram that shows generation of exponential variates plotted!")
+print("\t\tThe N_tr={}".format(N_tr), "exponential random variates with average value equal to 2 generated through CDF inversion method are:")
+print("\t\t{}".format(exp_rv))
+
 
 # --------------------------------------------
