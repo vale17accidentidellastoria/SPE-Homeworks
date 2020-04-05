@@ -86,7 +86,7 @@ def plotQQ(rvs, lamb, N, dist="expon"):
     if dist == "expon":
         # fig = sm.qqplot(np.array(exp_rv), dist=st.expon, fit=True, line='45')
         fig = sm.qqplot(np.array(rvs), dist=st.expon, scale=(1 / lamb), line='45')  # the scale for an exponential distribution
-    plt.title("QQ Plot of Exponential Distribution (" + str(N) + " draws) with with average value =" + str(lamb))
+    plt.title("QQ Plot (" + str(N) + " draws) against exponential quantiles with average value = " + str(lamb))
     plt.show()
 
 
@@ -293,23 +293,21 @@ plotQQ(exp_rv, avg_lambda1, N_tr, dist="expon")
 
 #Drawing qqplot against the quantiles of an exponential distribution with different average value
 avg_lambda2 = 4
-exp_rv2 = runCDFInversion(N_tr, avg_lambda2)
 
 print("\t 3. Plotting QQ-Plot against quantiles of exponential distribution with average value =", avg_lambda2)
-plotQQ(exp_rv2, avg_lambda2, N_tr, dist="expon")
+plotQQ(exp_rv, avg_lambda2, N_tr, dist="expon")
 
 N_tr2 = 2*N_tr
-exp_rv3 = runCDFInversion(N_tr2, avg_lambda1)
+exp_rv2 = runCDFInversion(N_tr2, avg_lambda1)
 
 print("\t\tPlotting QQ-Plot against quantiles of exponential distribution with average value =", avg_lambda1, "and increasing by 2x the number of exponential draws")
-plotQQ(exp_rv3, avg_lambda1, N_tr2, dist="expon")
+plotQQ(exp_rv2, avg_lambda1, N_tr2, dist="expon")
 
 N_tr4 = 4*N_tr
-exp_rv4 = runCDFInversion(N_tr4, avg_lambda1)
+exp_rv3 = runCDFInversion(N_tr4, avg_lambda1)
 
 print("\t\tPlotting QQ-Plot against quantiles of exponential distribution with average value =", avg_lambda1, "and increasing by 4x the number of exponential draws")
-plotQQ(exp_rv4, avg_lambda1, N_tr4, dist="expon")
-
+plotQQ(exp_rv3, avg_lambda1, N_tr4, dist="expon")
 
 
 # --------------------------------------------
