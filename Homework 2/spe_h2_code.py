@@ -86,6 +86,11 @@ def exercise1(data, poly_grade=[4, 6]):
     plt.plot(x, y)
     plt.show()
 
+    print('The mean of the distribution is {}, the variance is {} and the prediction interval at level 95% is [{}, {}].'.format(np.around(mean, 3), np.around(std**2, 3), mean-(1.96*std), mean+(1.96*std)))
+
+    st.probplot(detrend_y, dist="norm", plot=plt)
+    plt.show()
+
 
 def exercise1LS(data, data_matrix, color, poly_grade=6, show_plot=False):
     matrix_A = polynomialMatrix(data_matrix[:,0], poly_grade=poly_grade)
@@ -98,6 +103,58 @@ def exercise1LS(data, data_matrix, color, poly_grade=6, show_plot=False):
     plotScatter(data_matrix[:,0], data_y_ls, title='Scatter Plot of Exercise1', x_label='Time of measurement', y_label='output', color=color, show=show_plot)
     return data_y_ls
 
+def bernoulliRNG(s_prob=0.5):
+    return 1 if random(0, 1, 0.00001) <= s_prob else 0
+
+def countOnes(elements, s_prob=0.05):
+    counter = 0
+    for e in elements:
+        if e <= s_prob:
+            counter += 1
+    return counter  
+
+def exercise3(n_trials=10000, n_exp=100, p_success=0.05):
+    trials = []
+    trials_success = []
+    for t in range(n_trials):
+        exp = np.random.uniform(0, 1, n_exp)
+        p_trial = countOnes(exp, p_success) / float(n_exp)
+        trials.append(p_trial)
+        trials_success.append(countOnes(exp, p_success))
+        
+    #print(trials)
+
+    val, cnt = np.unique(trials_success, return_counts=True)
+    prop = cnt / n_trials
+    print('val', val)
+
+    plt.subplot(1, 3, 1)
+    plt.title('Empirical PMF')
+    plt.bar(val, prop)
+    plt.ylabel("Probability")
+    plt.xlabel("1s in the trial")
+
+    x = val
+    binomial = st.binom.pmf(x, n_exp, p_success) #(np.arange(0,21), n_trials, p_success) #.pmf(n_trials*p_success, n_trials, p_success)
+    print(binomial)
+
+    plt.subplot(1, 3, 2)
+    plt.title('Theoretical Binomial PMF')
+    plt.bar(x, binomial)
+    plt.ylabel("Probability")
+    plt.xlabel("1s in the trial")
+
+    poisson = st.poisson.pmf(x, n_exp*p_success) #(np.arange(0,21), n_trials, p_success) #.pmf(n_trials*p_success, n_trials, p_success)
+    print(poisson)
+
+    plt.subplot(1, 3, 3)
+    plt.title('Theoretical Poisson PMF')
+    plt.bar(x, poisson)
+    plt.ylabel("Probability")
+    plt.xlabel("1s in the trial")
+
+    plt.show()
+
 #--------------------------------------------
 
 #if __name__ == "__main__":
@@ -105,8 +162,22 @@ def exercise1LS(data, data_matrix, color, poly_grade=6, show_plot=False):
 #Exercise 1
 data1 = loadCSV("data_hw2/data_ex1.csv")
 
-exercise1(data1, poly_grade=[4, 5])
+#exercise1(data1, poly_grade=[2, 5])
+'''
+sp = 0
+results = []
+val = 1000000.0
+for i in range(1000000):
+    p = bernoulliRNG(0.05)
+    results.append(p)
+    if p == 1:
+        sp += 1
+'''
 
+exercise3()
+exercise3(n_exp=100, p_success=0.9)
+#print('results {}.'.format(results))
+#print('Success probability is {}.'.format(sp/val))
 
 
 '''
