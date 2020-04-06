@@ -155,6 +155,57 @@ def exercise3(n_trials=10000, n_exp=100, p_success=0.05):
 
     plt.show()
 
+def intervalError(n_s, n_f, n, z=1.96): 
+    return (1.96/n)*math.sqrt(n_s*(1-(n_s/float(n))))
+
+def countSuccess(data):
+    counter = 0
+    for e in data:
+        if e == 1:
+            counter += 1
+    return counter/float(len(data))
+
+def monteCarloSim(n_s, n):
+    x = random.uniform(-1, 1)
+    y = random.uniform(-1, 1)
+
+    d = np.around(math.sqrt(x**2+y**2), 3)
+
+    #print('Point ({}, {}) with distance from origin of {}.'.format(x, y, d))
+
+    success = False
+    if d <= 1.0:
+        n_s += 1
+        success = True
+    n += 1
+    return success, n_s, n, 4*(n_s/float(n))
+
+def meanSuccessProb(n_s_p):
+    sum = 0
+    for p in n_s_p:
+        sum += p
+    return sum/float(len(n_s_p))
+
+
+def exercise5(z=1.96):
+    n_s = 0
+    n = 0
+    n_s_p = []
+    pi_s = []
+    ie = 0
+    while ie >= 0.01 or n_s < 6 or n-n_s < 6:
+        success, n_s, n, pi = monteCarloSim(n_s, n)
+        n_s_p.append(n_s/float(n))
+        pi_s.append(pi)
+        mean = meanSuccessProb(n_s_p)
+        ie = intervalError(n_s, n-n_s, n)
+        #print('n: {} | n_s: {} | Mean: {} | Estimated pi: {}... | IntervalError: {}, condition: {}'.format(n, n_s, mean, pi, ie, ie <= 0.01))
+    
+    mean = meanSuccessProb(n_s_p)
+    ie = intervalError(n_s, n-n_s, n)
+    print('n: {} | n_s: {} | Estimated pi: {}... | CI is [{}, {}]'.format(n, n_s, pi_s[len(pi_s)-1], np.around(mean-ie, 3), np.around(mean+ie, 3)))
+
+
 #--------------------------------------------
 
 #if __name__ == "__main__":
@@ -162,39 +213,19 @@ def exercise3(n_trials=10000, n_exp=100, p_success=0.05):
 #Exercise 1
 data1 = loadCSV("data_hw2/data_ex1.csv")
 
-#exercise1(data1, poly_grade=[2, 5])
-'''
-sp = 0
-results = []
-val = 1000000.0
-for i in range(1000000):
-    p = bernoulliRNG(0.05)
-    results.append(p)
-    if p == 1:
-        sp += 1
-'''
+exercise1(data1, poly_grade=[2, 5])
 
-exercise3()
-exercise3(n_exp=100, p_success=0.9)
-#print('results {}.'.format(results))
-#print('Success probability is {}.'.format(sp/val))
-
-
-'''
-## scatte plot of data1
-plt.scatter(x, y, s=area, c=colors, alpha=0.5)
-plt.title('Scatter plot pythonspot.com')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.show()
-'''
-
-'''
 #Exercise 2
 data2 = loadCSV("data_hw2/data_ex2.csv")
 
 plotHistogram(data2, print_distr=False)
 
+#Exercise 3
+
+exercise3()
+exercise3(n_exp=100, p_success=0.9)
+#print('results {}.'.format(results))
+#print('Success probability is {}.'.format(sp/val))
 
 
 #Exercise 4
@@ -204,4 +235,6 @@ for i in range(0, len(data4)):
     num_occurrences.append(data4[i][1])
 
 plotHistogram(num_occurrences, print_distr=False)
-'''
+
+#Exercise 5
+exercise5()
