@@ -329,7 +329,9 @@ def exercise1(data, poly_grade=[4, 6]):
     print("\t 3. Mean, Variance, Prediction Interval and QQ-PLOT.")
     print('\t\tThe mean of the distribution is {}, the variance is {} and the prediction interval at level 95% is [{}, {}].'.format(np.around(mean, 3), np.around(std**2, 3), mean-(1.96*std), mean+(1.96*std)))
 
-    st.probplot(detrend_y, dist="norm", plot=plt)
+    sm.qqplot(detrend_y, dist=st.norm, scale=std, line='45')
+    plt.title("QQ Plot gaussian distribution quantiles with standard deviation = " + str(np.around(std, 3)))
+    #st.probplot(detrend_y, dist="norm", plot=plt)
     plt.show()
 
 def exercise3(n_trials=10000, n_exp=100, p_success=0.05, ex4=False):
