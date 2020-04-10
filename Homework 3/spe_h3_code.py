@@ -88,11 +88,66 @@ def computeAvgThroughput(markov_outs, throughputs):
     res = np.sum(np.multiply(np.array(list(markov_outs.values())), throughputs))
     return res
 
+def computeBins(data):
+    """ Computes the necessary number of bins for the histogram according to the input data """
+    num_observation = len(data)  # the number of observations
+    data_range = max(data) - min(data)  # range is the difference between minimum value and maximum value
+    num_intervals = int(round(math.sqrt(num_observation)))
+    binwidth = data_range / num_intervals
+    return np.arange(min(data), max(data) + binwidth, binwidth)
 
+
+def plotHistogram(data, d=False):
+    bins_hist = computeBins(data)
+    plt.hist(data, bins=bins_hist, density=d)
+    #plt.show()
+
+def computeSinc(x, A=1.8988):
+    if x == 0:
+        return 1
+    return (1/A)*abs(math.sin(math.pi*x)/(math.pi*x))
+
+def computeSamplingRejection(runs=10000):
+    accepted_x=[]
+    accepted_y=[]
+    for run in range(runs):
+        x = random.uniform(-6, 6)
+        y = random.uniform(0, 1)/1.8988
+        if y <= computeSinc(x):
+            accepted_x.append(x)
+            accepted_y.append(y)
+    return accepted_x, accepted_y
 # --------------------------------------------
 
 # Exercise 1
 
+print("\nExercise 1")
+results_x = []
+results_y = []
+for x in np.arange(-6, 7, 0.1):
+    y = computeSinc(x)
+    #print(x, y)
+    results_x.append(x)
+    results_y.append(y)
+
+empirical_x, empirical_y = computeSamplingRejection()
+print(empirical_y)
+plt.subplot(1, 2, 1)
+plt.title('Empirical PDF')
+plt.bar(empirical_x, empirical_y)
+#plotHistogram(empirical_y)
+#plt.hist(empirical_y, bins=np.arange(-6, 6.1, 0.1), density=False)
+plt.ylabel("Probability")
+plt.xlabel("Sampling")
+
+plt.subplot(1, 2, 2)
+plt.title('f(x)')
+plt.plot(results_x, results_y)
+plt.ylabel("Probability")
+plt.xlabel("x")
+plt.show()
+
+quit()
 # --------------------------------------------
 
 # Exercise 2
