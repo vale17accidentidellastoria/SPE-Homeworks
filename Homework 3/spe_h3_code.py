@@ -8,6 +8,7 @@ import statsmodels.api as sm
 
 random.seed()
 
+METRIC = {'median': 'computeMedian', 'mean': 'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev', 'variance': 'computeVar', 'log_mean': 'computeLogMean', 'bernoulli': 'bernoulliRVBS'}
 
 def loadCSV(csv_file):  # TODO: Remember to modify it according to data of exercise 3
     dataset = pd.read_csv(csv_file, header=None)  # here we are working with Pandas DataFrame
@@ -63,9 +64,10 @@ def checkState(d, state_num):
 
 
 def markovChain(P, iterations, counters):
-    states_history = [] # to keep track of the states visited (history of states): IF NECESSARY...
+    states_history = []  # to keep track of the states visited (history of states): IF NECESSARY...
 
-    initial_state = random.randrange(1, len(P) + 1)  # Set initial state at random (we have 4 states to consider in this exercise)
+    initial_state = random.randrange(1, len(
+        P) + 1)  # Set initial state at random (we have 4 states to consider in this exercise)
     states_history.append(initial_state)
     counters = checkState(counters, initial_state)
 
@@ -79,7 +81,7 @@ def markovChain(P, iterations, counters):
     output_res = {}
 
     for index, d in enumerate(counters.values()):
-        output_res[index+1] = d / iterations
+        output_res[index + 1] = d / iterations
 
     return counters, output_res, states_history
 
@@ -87,6 +89,110 @@ def markovChain(P, iterations, counters):
 def computeAvgThroughput(markov_outs, throughputs):
     res = np.sum(np.multiply(np.array(list(markov_outs.values())), throughputs))
     return res
+
+
+def computeMean(x):
+    sum_x = 0
+    n = len(x)
+    for i in range(0,n):
+        sum_x += x[i]
+    mean = sum_x / n
+    return mean
+
+
+def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
+    ds_length = len(dataset)
+    samples_metric = []
+
+    samples_metric.append(globals()[METRIC[metric]](dataset))
+    R = math.ceil(2 * (accuracy / (1-ci_level))) - 1
+
+    for r in range(R):
+        tmp_dataset = []
+        for i in range(ds_length):
+            tmp_dataset.append(dataset[random.randrange(0, ds_length, 1)])
+        samples_metric.append(globals()[METRIC[metric]](tmp_dataset)) # load the desired metric function
+
+    samples_metric.sort()
+    #print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
+    return samples_metric[accuracy:(R+1-accuracy)]
+
+
+def plotTimeSlotMarkov(states, num_point):
+    x_axis = np.arange(1, num_point + 1)
+    s = states[:num_point]
+
+    y_axis_state1 = []
+    y_axis_state2 = []
+    y_axis_state3 = []
+    y_axis_state4 = []
+
+    count_1 = 0
+    count_2 = 0
+    count_3 = 0
+    count_4 = 0
+
+    for i in range(0, len(s)):
+        if s[i] == 1:
+            count_1 += 1
+        elif s[i] == 2:
+            count_2 += 1
+        elif s[i] == 3:
+            count_3 += 1
+        elif s[i] == 4:
+            count_4 += 1
+        y_axis_state1.append(count_1 / (i + 1))
+        y_axis_state2.append(count_2 / (i + 1))
+        y_axis_state3.append(count_3 / (i + 1))
+        y_axis_state4.append(count_4 / (i + 1))
+
+    fig = plt.figure()
+    ax = fig.gca()
+    ax.set_yticks(np.arange(0, 1.5, 0.1))
+
+    plt.scatter(x_axis, y_axis_state1, marker='.', color='b', linewidths=1)
+    plt.scatter(x_axis, y_axis_state2, marker='.', color='r', linewidths=1)
+    plt.scatter(x_axis, y_axis_state3, marker='.', color='g', linewidths=1)
+    plt.scatter(x_axis, y_axis_state4, marker='.', color='m', linewidths=1)
+    plt.grid(b=None, axis='y')
+    plt.show()
+
+
+def setThroughputForStates(s, tr_values):
+    s_tr = []
+
+    for i in range(0, len(s)):
+        if s[i] == 1:
+            s_tr.append(tr_values[0])
+        elif s[i] == 2:
+            s_tr.append(tr_values[1])
+        if s[i] == 3:
+            s_tr.append(tr_values[2])
+        elif s[i] == 4:
+            s_tr.append(tr_values[3])
+
+    return s_tr
+
+
+def plotAvgThroughput(s, n_points, throughputs):
+    x_axis = np.arange(1, n_points + 1)
+
+    s = s[:n_points]
+
+    states_tr = setThroughputForStates(s, throughputs)
+
+    y_axis = []
+
+    for i in range(0, len(states_tr)):
+        index = i + 1
+        y_axis.append(sum(states_tr[:index]) / index)
+
+    C_I = bootstrapAlgorithm(states_tr, ci_level=0.95, metric='mean')
+
+    fig, ax1, = plt.subplots()
+    ax1.scatter(x_axis, y_axis, marker='.', color='b', linewidths=1)
+    plt.axhspan(C_I[0], C_I[-1], color='b', alpha=0.2)
+    plt.show()
 
 
 # --------------------------------------------
@@ -103,27 +209,30 @@ MARKOV_ITERS = int(10E4)
 intial_states_counter = {'state1': 0, 'state2': 0, 'state3': 0, 'state4': 0}
 
 P = makeTransitionProbabilityMatrix()
-# print(P)
 state_counter, m_output, history = markovChain(P, MARKOV_ITERS, intial_states_counter)
-#print(state_counter)
-#print(m_output)
 
-for i in range (1, len(m_output) + 1):
+for i in range(1, len(m_output) + 1):
     if i == 1:
-        print("\t 1. # times the chain is in State", i ,": is", int(m_output[i]*MARKOV_ITERS) , "/", MARKOV_ITERS, "=", m_output[i])
+        print("\t 1. # times the chain is in State", i, ": is", int(m_output[i] * MARKOV_ITERS), "/", MARKOV_ITERS, "=",
+              m_output[i])
     else:
-        print("\t\t# times the chain is in State", i ,": is", int(m_output[i]*MARKOV_ITERS) , "/", MARKOV_ITERS, "=", m_output[i])
+        print("\t\t# times the chain is in State", i, ": is", int(m_output[i] * MARKOV_ITERS), "/", MARKOV_ITERS, "=",
+              m_output[i])
 
-#TODO: write here plots for Point 2 of Exercise 2
-
+num_points = int(10E2)
+plotTimeSlotMarkov(history, num_points)
 print("\t 2. Plotted computed fractions as a function of the number of steps!")
 
 throughput_values = [1500, 1000, 250, 50]
 avg_throughput = computeAvgThroughput(m_output, throughput_values)
-
 print("\t 3. The estimated average throughput over the wireless channel is", avg_throughput)
 
-#TODO: write here plots for Exercise 3
+states_and_thr = setThroughputForStates(history, throughput_values)
+ci = bootstrapAlgorithm(states_and_thr, ci_level=0.95, metric='mean')
+print("\t\tThe 95% CI for the average throughput is between [", ci[0], ci[-1], "]")
+
+n_points_throughput = int(10E2)
+plotAvgThroughput(history, n_points_throughput, throughput_values)
 
 print("\n####################")
 
