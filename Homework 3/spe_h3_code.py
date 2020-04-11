@@ -5,10 +5,14 @@ import matplotlib.pyplot as plt
 import random
 import scipy.stats as st
 import statsmodels.api as sm
+from scipy.spatial import distance
 
 random.seed()
 
-METRIC = {'median': 'computeMedian', 'mean': 'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI', 'stddev': 'computeStdDev', 'variance': 'computeVar', 'log_mean': 'computeLogMean', 'bernoulli': 'bernoulliRVBS'}
+METRIC = {'median': 'computeMedian', 'mean': 'computeMean', 'gap': 'computeGap', 'jain': 'computeJFI',
+          'stddev': 'computeStdDev', 'variance': 'computeVar', 'log_mean': 'computeLogMean',
+          'bernoulli': 'bernoulliRVBS'}
+
 
 def loadCSV(csv_file):  # TODO: Remember to modify it according to data of exercise 3
     dataset = pd.read_csv(csv_file, header=None)  # here we are working with Pandas DataFrame
@@ -94,7 +98,7 @@ def computeAvgThroughput(markov_outs, throughputs):
 def computeMean(x):
     sum_x = 0
     n = len(x)
-    for i in range(0,n):
+    for i in range(0, n):
         sum_x += x[i]
     mean = sum_x / n
     return mean
@@ -105,17 +109,17 @@ def bootstrapAlgorithm(dataset, accuracy=25, ci_level=0.95, metric='mean'):
     samples_metric = []
 
     samples_metric.append(globals()[METRIC[metric]](dataset))
-    R = math.ceil(2 * (accuracy / (1-ci_level))) - 1
+    R = math.ceil(2 * (accuracy / (1 - ci_level))) - 1
 
     for r in range(R):
         tmp_dataset = []
         for i in range(ds_length):
             tmp_dataset.append(dataset[random.randrange(0, ds_length, 1)])
-        samples_metric.append(globals()[METRIC[metric]](tmp_dataset)) # load the desired metric function
+        samples_metric.append(globals()[METRIC[metric]](tmp_dataset))  # load the desired metric function
 
     samples_metric.sort()
-    #print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
-    return samples_metric[accuracy:(R+1-accuracy)]
+    # print('sample_metric_len:', len(samples_metric), 'range len:', len(samples_metric[accuracy:(R+1-accuracy)]))
+    return samples_metric[accuracy:(R + 1 - accuracy)]
 
 
 def plotTimeSlotMarkov(states, num_point):
@@ -195,6 +199,79 @@ def plotAvgThroughput(s, n_points, throughputs):
     plt.show()
 
 
+def createRandomCoordinates(xi, yi, xj, yj, num=1000):
+    coord_i = []
+    coord_j = []
+
+    for i in range(num):
+        x_i = int(random.uniform(xi[0], xi[1] + 1))
+        y_i = int(random.uniform(yi[0], yi[1] + 1))
+        x_j = int(random.uniform(xj[0], xj[1] + 1))
+        y_j = int(random.uniform(yj[0], yj[1] + 1))
+        coord_i.append((x_i, y_i))
+        coord_j.append((x_j, y_j))
+
+    return coord_i, coord_j
+
+
+def computeAreas(x_i, y_i, x_j, y_j):
+    l1_i = x_i[1] - x_i[0]
+    l2_i = y_i[1] - y_i[0]
+    Ai = l1_i * l2_i
+
+    l1_j = x_j[1] - x_j[0]
+    l2_j = y_j[1] - y_j[0]
+    Aj = l1_j * l2_j
+
+    return Ai, Aj
+
+def generateExpRV(exp_lambda):
+    U = random.uniform(0, 1)
+    x = - (math.log(U) / exp_lambda)
+    return x
+
+
+def runCDFInversionExp(N, avg_lambda):
+    rvs_exp = []
+    for i in range(0, N):
+        rvs_exp.append(generateExpRV(avg_lambda))
+    return rvs_exp
+
+
+def computeSNR(fading_coeff, dist):
+    k = 2
+    p_n = 3.2E-5
+    p_t = 5
+    snr = (fading_coeff * p_t * pow(dist, -k)) / p_n
+    return snr
+
+
+def indicatorFunction(snr, threshold):
+    if snr < threshold:
+        return 1
+    else:
+        return 0
+
+
+def monteCarloIntegration(num_draws, num_draws_exp, coords_i, coords_j, theta, A_i, A_j):
+    res = []
+    for i in range(0, num_draws):
+        dist = distance.euclidean(coords_i[i], coords_j[i])
+
+        random_fadings = runCDFInversionExp(num_draws_exp, 1)
+
+        for ind in range(0, len(random_fadings)):
+            fading = random_fadings[ind]
+            snr = computeSNR(fading, dist)
+            indicator = indicatorFunction(snr, theta)
+
+            tmp_p = (math.exp(-fading) / (A_i * A_j)) * indicator
+
+            res.append(tmp_p)
+
+    return np.sum(res) / len(res)
+
+
 # --------------------------------------------
 
 # Exercise 1
@@ -202,7 +279,7 @@ def plotAvgThroughput(s, n_points, throughputs):
 # --------------------------------------------
 
 # Exercise 2
-
+# TODO: add labels to the plots on the x axis and also y
 print("\nExercise 2")
 
 MARKOV_ITERS = int(10E4)
@@ -236,6 +313,7 @@ plotAvgThroughput(history, n_points_throughput, throughput_values)
 
 print("\n####################")
 
+
 # --------------------------------------------
 
 # Exercise 3
@@ -245,6 +323,59 @@ print("\n####################")
 # Exercise 4
 
 print("\nExercise 4")
+
+theta_values = np.arange(1, 320 + 1)
+
+num_position_draws = 1000
+num_fading_draws = 50
+
+#coordinates_i, coordinates_j = createRandomCoordinates(num=num_position_draws)
+xi_lim = (0,20)
+yi_lim = (0,60)
+xj_lim = (60,80)
+yj_lim = (0,60)
+coordinates_i, coordinates_j = createRandomCoordinates(xi_lim, yi_lim, xj_lim, yj_lim, num=num_position_draws)
+A_i, A_j = computeAreas(xi_lim, yi_lim, xj_lim, yj_lim)
+
+probs_values = []
+
+for th in range(1, len(theta_values) + 1):
+    probs_values.append(monteCarloIntegration(num_position_draws, num_fading_draws, coordinates_i, coordinates_j, th, A_i, A_j))
+
+print("\t 1. The probabilities computed for each value of theta between [1, 320] are:")
+print("\t\t" + str(probs_values))
+
+plt.plot(theta_values, probs_values)
+plt.show()
+print("\t\tPlotted variation of p vs theta!")
+
+#-------------
+
+new_coordinates_i, new_coordinates_j = createRandomCoordinates((10,40), (0,10), (20,60), (20,90), num=num_position_draws)
+new_A_i, new_A_j = computeAreas((10,40), (0,10), (20,60), (20,90))
+
+new_probs_values = []
+
+for th in range(1, len(theta_values) + 1):
+    new_probs_values.append(monteCarloIntegration(num_position_draws, num_fading_draws, new_coordinates_i, new_coordinates_j, th, new_A_i, new_A_j))
+
+plt.plot(theta_values, new_probs_values)
+plt.show()
+print("\t 2. Plot obtained by playing with the size of the area of positions i and j!")
+
+#-------------
+
+new_num_position_draws = 100
+new_num_fading_draws = 5
+
+probs_values = []
+
+for th in range(1, len(theta_values) + 1):
+    probs_values.append(monteCarloIntegration(new_num_position_draws, new_num_fading_draws, coordinates_i, coordinates_j, th, A_i, A_j))
+
+plt.plot(theta_values, probs_values)
+plt.show()
+print("\t\tPlotted with reduction in the number of realizations (", new_num_position_draws, "for node positions and", new_num_fading_draws, "for fading)!")
 
 print("\n####################")
 
