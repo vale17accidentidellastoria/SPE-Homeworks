@@ -159,6 +159,7 @@ def plotTimeSlotMarkov(states, num_point):
     plt.scatter(x_axis, y_axis_state3, marker='.', color='g', linewidths=1)
     plt.scatter(x_axis, y_axis_state4, marker='.', color='m', linewidths=1)
     plt.grid(b=None, axis='y')
+    plt.xlabel("# of state transitions")
     plt.show()
 
 
@@ -196,6 +197,8 @@ def plotAvgThroughput(s, n_points, throughputs):
     fig, ax1, = plt.subplots()
     ax1.scatter(x_axis, y_axis, marker='.', color='b', linewidths=1)
     plt.axhspan(C_I[0], C_I[-1], color='b', alpha=0.2)
+    plt.xlabel("# of state transitions")
+    plt.ylabel("Throughput (Mbit/s)")
     plt.show()
 
 
@@ -279,7 +282,7 @@ def monteCarloIntegration(num_draws, num_draws_exp, coords_i, coords_j, theta, A
 # --------------------------------------------
 
 # Exercise 2
-# TODO: add labels to the plots on the x axis and also y
+
 print("\nExercise 2")
 
 MARKOV_ITERS = int(10E4)
@@ -306,7 +309,7 @@ print("\t 3. The estimated average throughput over the wireless channel is", avg
 
 states_and_thr = setThroughputForStates(history, throughput_values)
 ci = bootstrapAlgorithm(states_and_thr, ci_level=0.95, metric='mean')
-print("\t\tThe 95% CI for the average throughput is between [", ci[0], ci[-1], "]")
+print("\t\tThe 95% CI for the average throughput is between [", ci[0], ",", ci[-1], "]")
 
 n_points_throughput = int(10E2)
 plotAvgThroughput(history, n_points_throughput, throughput_values)
@@ -365,17 +368,33 @@ print("\t 2. Plot obtained by playing with the size of the area of positions i a
 
 #-------------
 
-new_num_position_draws = 100
-new_num_fading_draws = 5
+new_num_position_draws1 = 500
+new_num_fading_draws1 = 20
 
 probs_values = []
 
 for th in range(1, len(theta_values) + 1):
-    probs_values.append(monteCarloIntegration(new_num_position_draws, new_num_fading_draws, coordinates_i, coordinates_j, th, A_i, A_j))
+    probs_values.append(monteCarloIntegration(new_num_position_draws1, new_num_fading_draws1, coordinates_i, coordinates_j, th, A_i, A_j))
 
 plt.plot(theta_values, probs_values)
 plt.show()
-print("\t\tPlotted with reduction in the number of realizations (", new_num_position_draws, "for node positions and", new_num_fading_draws, "for fading)!")
+print("\t\tPlotted with reduction in the number of realizations (", new_num_position_draws1, "for node positions and", new_num_fading_draws1, "for fading )!")
+
+print("\n####################")
+
+#-------------
+
+new_num_position_draws2 = 100
+new_num_fading_draws2 = 20
+
+probs_values = []
+
+for th in range(1, len(theta_values) + 1):
+    probs_values.append(monteCarloIntegration(new_num_position_draws2, new_num_fading_draws2, coordinates_i, coordinates_j, th, A_i, A_j))
+
+plt.plot(theta_values, probs_values)
+plt.show()
+print("\t\tPlotted with reduction in the number of realizations (", new_num_position_draws2, "for node positions and", new_num_fading_draws2, "for fading )!")
 
 print("\n####################")
 
