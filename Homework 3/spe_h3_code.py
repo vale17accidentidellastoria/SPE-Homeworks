@@ -94,7 +94,6 @@ def computeAvgThroughput(markov_outs, throughputs):
     res = np.sum(np.multiply(np.array(list(markov_outs.values())), throughputs))
     return res
 
-<<<<<<< HEAD
 def computeBins(data):
     """ Computes the necessary number of bins for the histogram according to the input data """
     num_observation = len(data)  # the number of observations
@@ -394,6 +393,7 @@ def monteCarloIntegration(num_draws, num_draws_exp, coords_i, coords_j, theta, A
 # Exercise 1
 
 print("\nExercise 1")
+print("\t #1 and #2 graph")
 runs = 50000
 results_x = []
 results_y = []
@@ -404,7 +404,6 @@ for x in np.arange(-6, 7, 0.1):
     results_y.append(y)
 
 empirical_x, empirical_y, bad_x, bad_y = computeSamplingRejection(runs)
-#print(empirical_y)
 
 empirical = (empirical_x, empirical_y)
 bad = (bad_x, bad_y)
@@ -418,19 +417,13 @@ plt.subplot(1, 3, 1)
 for data, color, group in zip(data, colors, groups):
     x, y = data
     plt.title('Rejection sampling with {} runs'.format(runs))
-    #plt.plot(empirical_x, empirical_y, 'ro', markerfacecolor='blue', markersize=1)
-    #plt.plot(bad_x, bad_y, 'ro', markerfacecolor='red', markersize=1)
     plt.scatter(x, y, alpha=0.8, c=color, edgecolors='none', s=2, label=group)
     plt.ylabel("Probability")
     plt.xlabel("x")
     plt.legend(loc=2)
 
-#plt.title('Rejection sampling with {} runs'.format(runs))
 plt.subplot(1, 3, 2)
 plt.title('Empirical PDF')
-#plt.bar(empirical_x, empirical_y)
-#plotHistogram(empirical_y)
-#plt.hist(empirical_y, bins=np.arange(-6, 6.1, 0.1), density=False)
 plt.hist(empirical_x, density=True, bins=int(np.around(1+3.3*math.log(runs), 0)), edgecolor='black', linewidth=0.5)
 plt.ylabel("Probability")
 plt.xlabel("Sampling")
@@ -483,7 +476,7 @@ print("\n####################")
 # --------------------------------------------
 
 # Exercise 3
-
+print("\nExercise 3")
 data3 = np.array(loadCSV("data_hw3/theory_ex3.csv"))
 
 trials = 500
@@ -503,7 +496,7 @@ for case in cases:
         tmp_k_error.append(intervalError(k, case.nodes-k, case.nodes))
     k_avg.append(tmp_k_avg)
     k_error.append(tmp_k_error)
-    print('Success has {} % probability and error probability of {}.'.format(d_success/trials, 1-d_success/trials))
+    print('\tSuccess has {} % probability and error probability of {}.'.format(d_success/trials, 1-d_success/trials))
 
 p_cases = []
 p_errors = data3[:,0]#np.arange(0.02, 1.0, 0.02)
