@@ -107,21 +107,137 @@ def computeSinc(x, A=1.8988):
         return 1
     return (1/A)*abs(math.sin(math.pi*x)/(math.pi*x))
 
-def computeSamplingRejection(runs=10000):
+def computeSamplingRejection(runs=20000):
     accepted_x=[]
     accepted_y=[]
+    rejected_x=[]
+    rejected_y=[]
     for run in range(runs):
         x = random.uniform(-6, 6)
         y = random.uniform(0, 1)/1.8988
         if y <= computeSinc(x):
             accepted_x.append(x)
             accepted_y.append(y)
-    return accepted_x, accepted_y
+        else:
+            rejected_x.append(x)
+            rejected_y.append(y)
+    return accepted_x, accepted_y, rejected_x, rejected_y
+
+def intervalError(n_s, n_f, n, z=1.96): 
+    return (1.96/n)*math.sqrt(n_s*(1-(n_s/float(n))))
+
+class Network():
+    def __init__(self, r, n):
+        self.r = r
+        self.n = n
+        self.nodes = np.zeros(shape=(r, n), dtype=int)
+        self.k_nodes = np.zeros(shape=(r), dtype=int)
+        self.destination = 0
+
+    def propagate(self, p=0.1):
+        source = 1
+        destination = 0
+        for i in range(len(self.nodes)):
+            for j in range(len(self.nodes[i])):
+                if i == 0:
+                    self.nodes[i][j] = np.random.binomial(1, 1-p, 1)
+                else:
+                    k = sum(self.nodes[i-1])
+                    if k == 0:
+                        return 0
+                    self.nodes[i][j] = np.random.binomial(1, 1-(p**k), 1)
+            self.k_nodes[i] = sum(self.nodes[i])
+            #print('{}\t| k = {} \t| values = {}'.format(i, sum(self.nodes[i]), self.nodes[i]))
+
+        last_k = sum(self.nodes[len(self.nodes)-1])
+        #destination =  np.random.binomial(1, 1-(p**last_k), 1)
+        #print('k = {} \t| D: {}.'.format(last_k, destination))
+        self.destination = np.random.binomial(1, 1-(p**last_k), 1)[0]
+
+def meanSuccessProb(n_s_p):
+    sum = 0
+    for p in n_s_p:
+        sum += p
+    return sum/float(len(n_s_p))
+
+class Case():
+    def __init__(self, networks, d_success, ks_success, ie, stages, nodes):
+        self.networks = networks
+        self.d_success = d_success
+        self.ks_success = ks_success
+        self.ie = ie
+        self.stages = stages
+        self.nodes = nodes
+
+def monteCarloSim(p_error=0.1, trials=10000, network_shapes=[[2, 2],[5, 10]]):
+    cases = []
+
+    for network in network_shapes:
+        networks = []
+        d_success = []
+        ks_success = []
+
+        for i in range(trials):
+            tmp_network = Network(network[0], network[1])
+            tmp_network.propagate(p_error)
+            networks.append(tmp_network)
+            d_success.append(tmp_network.destination)
+            ks_success.append(tmp_network.k_nodes)
+
+        ie = intervalError(sum(d_success), trials-sum(d_success), trials)
+        tmp_ks = np.array(ks_success)
+        ks = []
+        for i in range(network[0]):
+            ks.append(sum(tmp_ks[:,i]/trials))
+        #print(tmp_ks[0], ks)
+
+        #ks_success = intervalError(sum(ks_success), network[1]-sum(ks_success), network[1])
+        case = Case(networks, d_success, ks, ie, network[0], network[1])
+        cases.append(case)
+
+
+    '''
+    Network = Network(2, 2)
+    n_success = 0
+
+    for i in range(trials):
+        n_success += Network.propagate(p_error)
+
+    trials = float(trials)
+
+    mean = meanSuccessProb(n_s_p)
+    
+    ie = intervalError(n_s, n-n_s, n)
+
+    print('Success has {} % probability and error probability of {}.'.format(success/trials, 1-success/trials))
+
+
+    x = random.uniform(-1, 1)
+    y = random.uniform(-1, 1)
+
+    d = np.around(math.sqrt(x**2+y**2), 3)
+
+    #print('Point ({}, {}) with distance from origin of {}.'.format(x, y, d))
+
+    success = False
+    if d <= 1.0:
+        n_s += 1
+        success = True
+    n += 1
+    return success, n_s, n, 4*(n_s/float(n))
+    '''
+
+    return cases
+
+def plotBarDiagram(items, probs):
+    plt.bar(items, probs, width=0.2)
+    plt.show()
 # --------------------------------------------
 
 # Exercise 1
 
 print("\nExercise 1")
+runs = 50000
 results_x = []
 results_y = []
 for x in np.arange(-6, 7, 0.1):
@@ -130,24 +246,45 @@ for x in np.arange(-6, 7, 0.1):
     results_x.append(x)
     results_y.append(y)
 
-empirical_x, empirical_y = computeSamplingRejection()
-print(empirical_y)
-plt.subplot(1, 2, 1)
+empirical_x, empirical_y, bad_x, bad_y = computeSamplingRejection(runs)
+#print(empirical_y)
+
+empirical = (empirical_x, empirical_y)
+bad = (bad_x, bad_y)
+
+data = (empirical, bad)
+colors = ("blue", "red")
+groups = ("accepted", "rejected")
+
+
+plt.subplot(1, 3, 1)
+for data, color, group in zip(data, colors, groups):
+    x, y = data
+    plt.title('Rejection sampling with {} runs'.format(runs))
+    #plt.plot(empirical_x, empirical_y, 'ro', markerfacecolor='blue', markersize=1)
+    #plt.plot(bad_x, bad_y, 'ro', markerfacecolor='red', markersize=1)
+    plt.scatter(x, y, alpha=0.8, c=color, edgecolors='none', s=2, label=group)
+    plt.ylabel("Probability")
+    plt.xlabel("x")
+    plt.legend(loc=2)
+
+#plt.title('Rejection sampling with {} runs'.format(runs))
+plt.subplot(1, 3, 2)
 plt.title('Empirical PDF')
-plt.bar(empirical_x, empirical_y)
+#plt.bar(empirical_x, empirical_y)
 #plotHistogram(empirical_y)
 #plt.hist(empirical_y, bins=np.arange(-6, 6.1, 0.1), density=False)
+plt.hist(empirical_x, density=True, bins=int(np.around(1+3.3*math.log(runs), 0)), edgecolor='black', linewidth=0.5)
 plt.ylabel("Probability")
 plt.xlabel("Sampling")
 
-plt.subplot(1, 2, 2)
+plt.subplot(1, 3, 3)
 plt.title('f(x)')
 plt.plot(results_x, results_y)
 plt.ylabel("Probability")
 plt.xlabel("x")
 plt.show()
 
-quit()
 # --------------------------------------------
 
 # Exercise 2
@@ -185,6 +322,97 @@ print("\n####################")
 # --------------------------------------------
 
 # Exercise 3
+
+data3 = np.array(loadCSV("data_hw3/theory_ex3.csv"))
+
+trials = 500
+prob = 0.7
+cases = monteCarloSim(p_error=prob, trials=trials)
+
+k_avg = []
+k_error = []
+
+for case in cases:
+    d_success = sum(case.d_success)
+    tmp_k_avg = []
+    tmp_k_error = []
+    for k in case.ks_success:
+        #print('k', k, case.ks_success[1])
+        tmp_k_avg.append(k)
+        tmp_k_error.append(intervalError(k, case.nodes-k, case.nodes))
+    k_avg.append(tmp_k_avg)
+    k_error.append(tmp_k_error)
+    print('Success has {} % probability and error probability of {}.'.format(d_success/trials, 1-d_success/trials))
+
+p_cases = []
+p_errors = data3[:,0]#np.arange(0.02, 1.0, 0.02)
+
+for p in p_errors:
+    p_cases.append(monteCarloSim(p_error=p, trials=trials))
+
+y_cases = []
+y_errors = []
+
+
+
+for p_case in p_cases:
+    tmp_y = []
+    tmp_error = []
+    #tmp_k_avg = []
+    for case in p_case:
+        #print(1-(sum(case.d_success)/float(trials)), end=";")
+        tmp_y.append(1-(sum(case.d_success)/float(trials)))
+        tmp_error.append(case.ie)
+        #tmp_k_avg.append(case.ks_success)
+    y_cases.append(tmp_y)
+    y_errors.append(tmp_error)
+
+
+y = np.array(y_cases)
+ie = np.array(y_errors)
+#print(p_errors, y[:,0])
+
+plt.subplot(2, 2, 1)
+plt.title('Probability of error for r=2 and N=2')
+plt.errorbar(p_errors, y[:,0], yerr=ie[:,0], linestyle='None', marker='.')
+plt.ylabel("p of error at D")
+plt.xlabel("p of error")
+plt.subplot(2, 2, 2)
+plt.title('Probability of error for r=5 and N=10')
+plt.errorbar(p_errors, y[:,1], yerr=ie[:,1], linestyle='None', marker='.')
+plt.ylabel("p of error at D")
+plt.xlabel("p of error")
+
+
+plt.subplot(2, 2, 3)
+plt.title('Theoretical Probability of error for r=2 and N=2')
+plt.errorbar(p_errors, data3[:,1], linestyle='None', marker='.')
+plt.ylabel("p of error at D")
+plt.xlabel("p of error")
+plt.subplot(2, 2, 4)
+plt.title('Theoretical Probability of error for r=5 and N=10')
+plt.errorbar(p_errors, data3[:,2], linestyle='None', marker='.')
+plt.ylabel("p of error at D")
+plt.xlabel("p of error")
+
+
+plt.show()
+
+x_2 = ['1', '2']
+x_10 = ['1', '2', '3', '4', '5']
+plt.subplot(1, 2, 1)
+plt.title('K nodes for r=2 and N=2')
+plt.errorbar(x_2, k_avg[0], yerr=k_error[0], linestyle='None', marker='.')
+plt.ylabel("average successful nodes")
+plt.xlabel("relay")
+plt.subplot(1, 2, 2)
+plt.title('k nodes for r=5 and N=10')
+plt.errorbar(x_10, k_avg[1], yerr=k_error[1], linestyle='None', marker='.')
+plt.ylabel("average successful nodes")
+plt.xlabel("relay")
+
+plt.show()
+
 
 # --------------------------------------------
 
