@@ -10,7 +10,6 @@ import enum
 
 random.seed()
 
-MAX_SIMULATION_TIME = 1000
 
 class EType(enum.Enum):
     """
@@ -34,6 +33,9 @@ class Event:
 
 
 class Queue:
+    """
+    Class that defines some basic operations that will allow us to manipulate the event queue
+    """
     def __init__(self):
         self.queue = []
 
@@ -46,6 +48,9 @@ class Queue:
     # for checking if the queue is empty
     def isEmpty(self):
         return len(self.queue) == 0
+
+    def emptyQueue(self):
+        self.queue = []
 
     # for adding (enqueue) an element in the queue
     def enqueue(self, event):
@@ -69,52 +74,126 @@ class Queue:
         return e_pop
 
 
-class Simulator:
+class System:
+    """
+    Class created in order to access some parameter of our system like the server status and the number of elements in the queue
+    """
     def __init__(self):
+        self.server_status = 0 # the server status can be either 0 (=idle) or 1 (=busy)
+        self.num_packet_queue = 0
+
+    def getStatus(self):
+        return self.server_status
+
+    def setStatus(self, value):
+        self.server_status = value
+
+    def incrementQueue(self):
+        self.num_packet_queue += 1
+
+    def decrementQueue(self):
+        if self.num_packet_queue > 0:
+            self.num_packet_queue -= 1
+
+    def getNumQueue(self):
+        return self.num_packet_queue
+
+
+class Simulator:
+    """
+    This class let us define all the elements required to set up and then run the simulation we want to accomplish
+    """
+    def __init__(self, max_time, d_rate):
         self.event_queue = Queue() # initialize the event queue
         self.current_time = 0 # set the current time to 0
-        self.max_simulation_time = MAX_SIMULATION_TIME # set a maximum simulation time
+        self.max_simulation_time = max_time # set a maximum simulation time
         self.initStartEndEventsQueue() # to insert the start event and end event in the queue
+        self.d_rate = d_rate
+        self.initDebugEvents(d_rate) # to add some debug events in order to obtain useful information about the system
 
-    def initStartEndEventsQueue(self):
+    def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
         start_event = Event(self.current_time, EType.start, None)
         end_event = Event(self.max_simulation_time, EType.end, None)
         self.event_queue.enqueue(start_event)
         self.event_queue.enqueue(end_event)
 
-    def addEvent(self, occurrence_time, e_type, next_event):
-        new_event = Event(occurrence_time, e_type, next_event)
-        self.event_queue.enqueue(new_event)
+    def initDebugEvents(self, rate): # to add a DEBUG event at time intervals of rate=100
+        for i in range(rate, self.max_simulation_time, rate):
+            new_debug = Event(i, EType.debug, None)
+            self.event_queue.enqueue(new_debug)
 
-    def popEvent(self):
-        return self.event_queue.dequeue()
+    def runSimulation(self, arrival_rate_lambda, service_rate_mu):
+        system = System() # create an instance of our system
 
-    def runSimulation(self):
-        print("Simulation running")
+        #This is our event manager loop (Ex 1.5)
+        while 1:
+            current_event = self.event_queue.dequeue() # get the first event in the event queue
+            self.current_time = current_event.occurrence_time # get the current time for the system according to the occurrence time of the considered event
+            event_type = current_event.e_type.value
 
-#TODO: schedule a debug event and print useful info about the system like event queue, current metrics, ecc or also trigger an event upon the occurrence of another event
+            if event_type == "START":
+                print("=> START of simulation at time t =", self.current_time, "\n")
+                new_time = random.expovariate(arrival_rate_lambda)
+                new_arrival = Event(new_time, EType.arrival, None)
+                self.event_queue.enqueue(new_arrival)
+
+            elif event_type == "DEBUG":
+                #print("t = ", current_time, "DEBUG")
+                print("DEBUG EVENT #", int(self.current_time / self.d_rate))
+                print("The current time is:", self.current_time)
+                if system.getStatus() == 0:
+                    print("The server is IDLE")
+                else:
+                    print("The server is BUSY")
+                print("The number of packets in the queue is", system.getNumQueue())
+                print("---------")
+
+            elif event_type == "ARRIVAL":
+                #print("t = ", self.current_time, "ARRIVAL")
+                if system.getStatus() == 0:
+                    system.setStatus(1)
+                    new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
+                    new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None)
+                    self.event_queue.enqueue(new_arrival)
+                    self.event_queue.enqueue(new_departure)
+
+                elif system.getStatus() == 1:
+                    system.incrementQueue()
+                    new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
+                    self.event_queue.enqueue(new_arrival)
+
+            elif event_type == "DEPARTURE":
+                #print("t = ", self.current_time, "DEPARTURE")
+                if system.getStatus() == 1:
+                    if system.getNumQueue() == 0:
+                        system.setStatus(0)
+                        #print("#########")
+                    else:
+                        system.decrementQueue()
+                        new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None)
+                        self.event_queue.enqueue(new_departure)
+
+            elif event_type == "END":
+                print("\n=> END of simulation at time t =", self.current_time)
+                self.event_queue.emptyQueue() # since we arrived at the end of our simulation we empty the event queue
+                return
 
 
 # --------------------------------------------
 
 # Exercise 1
 
-simulator = Simulator()
-#Point 1.4: To test the insertion of more events in the queue
-simulator.addEvent(60, EType.arrival, None)
-simulator.addEvent(50, EType.departure, None)
-simulator.addEvent(80, EType.arrival, None)
+MAX_SIMULATION_TIME = 1000
+DEBUG_RATE = 100
 
-e_pop = simulator.popEvent()
+arrival_rate = 0.2 # this corresponds to lambda = 0.2
+service_rate = 0.4 # this corresponds to mu = 0.4
 
-for e in simulator.event_queue:
-    print(e.occurrence_time)
-    print(e.e_type)
-    if e.next_event is not None: print(e.next_event)
-    print("-----")
+simulator = Simulator(MAX_SIMULATION_TIME, DEBUG_RATE)
 
-print("°°°°°°°°°°°")
-print(simulator.event_queue)
+simulator.runSimulation(arrival_rate, service_rate)
+
+#print(simulator.event_queue)
 
 
 # --------------------------------------------
