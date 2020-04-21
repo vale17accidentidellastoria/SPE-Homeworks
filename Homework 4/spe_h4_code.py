@@ -98,6 +98,12 @@ class System:
     def getNumQueue(self):
         return self.num_packet_queue
 
+    def setNumQueue(self, value):
+        self.num_packet_queue = value
+
+    def getTotalNumPacketsSystem(self):
+        return self.getNumQueue() + self.getStatus()
+
 
 class Simulator:
     """
@@ -110,6 +116,8 @@ class Simulator:
         self.initStartEndEventsQueue() # to insert the start event and end event in the queue
         self.d_rate = d_rate # the rate for intervals of debug events
         self.initDebugEvents(d_rate) # to add some debug events in order to obtain useful information about the system
+        self.total_num_packets_system = []
+        self.total_temporal_values = []
 
     def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
         start_event = Event(self.current_time, EType.start, None)
@@ -122,6 +130,18 @@ class Simulator:
             new_debug = Event(i, EType.debug, None)
             self.event_queue.enqueue(new_debug)
 
+    def plotNumPacketsSystemTime(self, arrival_rate, service_rate, avg_packets_stationary):
+        x_axis = self.total_temporal_values
+        y_axis = self.total_num_packets_system
+
+        plt.bar(x_axis, y_axis, label="Instantaneous system utilisation")
+        plt.hlines(theoretical_avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed", label="Theoretical average")
+        plt.xlabel("time")
+        plt.ylabel("# packets in the system (queue + in service)")
+        plt.title("M/M/1, \u03BB = " + str(arrival_rate) + ", \u03BC = " + str(service_rate))
+        plt.legend(loc="upper right")
+        plt.show()
+
     def runSimulation(self, arrival_rate_lambda, service_rate_mu):
         system = System() # create an instance of our system
 
@@ -130,6 +150,10 @@ class Simulator:
             current_event = self.event_queue.dequeue() # get the first event in the event queue
             self.current_time = current_event.occurrence_time # get the current time for the system according to the occurrence time of the considered event
             event_type = current_event.e_type.value
+
+            current_num_packets_system = system.getTotalNumPacketsSystem()
+            self.total_num_packets_system.append(current_num_packets_system)
+            self.total_temporal_values.append(self.current_time)
 
             if event_type == "START":
                 print("=> START of simulation at time t =", self.current_time, "\n")
@@ -173,8 +197,10 @@ class Simulator:
                         self.event_queue.enqueue(new_departure)
 
             elif event_type == "END":
-                print("\n=> END of simulation at time t =", self.current_time)
+                print("\n=> END of simulation at time t =", self.current_time, "\n")
                 self.event_queue.emptyQueue() # since we arrived at the end of our simulation we empty the event queue
+                system.setStatus(0)
+                system.setNumQueue(0)
                 return
 
 
@@ -185,14 +211,26 @@ class Simulator:
 MAX_SIMULATION_TIME = 1000
 DEBUG_RATE = 100
 
-arrival_rate = 0.2 # this corresponds to lambda = 0.2
-service_rate = 0.4 # this corresponds to mu = 0.4
+lambdas = [0.2, 20, 30] # list of different values of arrival rates
+mus = [0.4, 30, 50] # list of different values of service rate
 
-simulator = Simulator(MAX_SIMULATION_TIME, DEBUG_RATE)
+print("Exercise 1 \n")
 
-simulator.runSimulation(arrival_rate, service_rate)
+for arrival_rate, service_rate in zip(lambdas, mus):
+    print("-- Simulation running with \u03BB = " + str(arrival_rate) + ", \u03BC = " + str(service_rate) + " --\n")
+    simulator = Simulator(MAX_SIMULATION_TIME, DEBUG_RATE)
 
-#print(simulator.event_queue)
+    simulator.runSimulation(arrival_rate, service_rate)
+
+    rho = arrival_rate / service_rate
+    theoretical_avg_packets_stationary = rho / (1 - rho)
+    simulator.plotNumPacketsSystemTime(arrival_rate, service_rate, theoretical_avg_packets_stationary)
+
+    print("Plotted number of packets in the system (queue + in service) against time with:")
+    print("\t\u03C1 = " + str(rho))
+    print("\ttheoretical average number of packets in the system in stationary conditions =", theoretical_avg_packets_stationary, "\n")
+
+    print("############\n")
 
 
 # --------------------------------------------
