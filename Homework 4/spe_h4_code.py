@@ -81,6 +81,7 @@ class System:
     def __init__(self):
         self.server_status = 0 # the server status can be either 0 (=idle) or 1 (=busy)
         self.num_packet_queue = 0
+        self.time_last_event = 0
 
     def getStatus(self):
         return self.server_status
@@ -104,6 +105,12 @@ class System:
     def getTotalNumPacketsSystem(self):
         return self.getNumQueue() + self.getStatus()
 
+    def getTimeLastEvent(self):
+        return self.time_last_event
+
+    def setTimeLastEvent(self, value):
+        self.time_last_event = value
+
 
 class Simulator:
     """
@@ -118,6 +125,7 @@ class Simulator:
         self.initDebugEvents(d_rate) # to add some debug events in order to obtain useful information about the system
         self.total_num_packets_system = []
         self.total_temporal_values = []
+        self.areas_under_qt = []
 
     def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
         start_event = Event(self.current_time, EType.start, None)
@@ -130,26 +138,37 @@ class Simulator:
             new_debug = Event(i, EType.debug, None)
             self.event_queue.enqueue(new_debug)
 
-    def plotNumPacketsSystemTime(self, arrival_rate, service_rate, avg_packets_stationary):
+    def plotNumPacketsSystemTime(self, lambda_rate, mu_rate, avg_packets_stationary):
         x_axis = self.total_temporal_values
         y_axis = self.total_num_packets_system
 
-        plt.bar(x_axis, y_axis, label="Instantaneous system utilisation")
-        plt.hlines(theoretical_avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed", label="Theoretical average")
+        plt.bar(x_axis, y_axis, label="Instantaneous system utilisation", zorder=1)
+        plt.hlines(avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed", label="Theoretical average", zorder=3)
+
+        plt.plot(x_axis, self.areas_under_qt, color='orange', linewidth=4, zorder=2, label="Average system utilization")
         plt.xlabel("time")
         plt.ylabel("# packets in the system (queue + in service)")
-        plt.title("M/M/1, \u03BB = " + str(arrival_rate) + ", \u03BC = " + str(service_rate))
+        plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
         plt.legend(loc="upper right")
+
         plt.show()
 
     def runSimulation(self, arrival_rate_lambda, service_rate_mu):
         system = System() # create an instance of our system
+        area_qt = 0
 
         #This is our event manager loop (Ex 1.5)
         while 1:
             current_event = self.event_queue.dequeue() # get the first event in the event queue
             self.current_time = current_event.occurrence_time # get the current time for the system according to the occurrence time of the considered event
             event_type = current_event.e_type.value
+
+            if self.current_time > 0:
+                area_qt += (system.getTotalNumPacketsSystem()*(self.current_time - system.getTimeLastEvent()))
+                self.areas_under_qt.append(area_qt/self.current_time)
+            else:
+                area_qt = 0
+                self.areas_under_qt.append(area_qt)
 
             current_num_packets_system = system.getTotalNumPacketsSystem()
             self.total_num_packets_system.append(current_num_packets_system)
@@ -203,6 +222,8 @@ class Simulator:
                 system.setNumQueue(0)
                 return
 
+            system.setTimeLastEvent(self.current_time)
+
 
 # --------------------------------------------
 
@@ -211,8 +232,8 @@ class Simulator:
 MAX_SIMULATION_TIME = 1000
 DEBUG_RATE = 100
 
-lambdas = [0.2, 20, 30] # list of different values of arrival rates
-mus = [0.4, 30, 50] # list of different values of service rate
+lambdas = [0.2, 3, 10] # list of different values of arrival rates
+mus = [0.4, 5, 30] # list of different values of service rate
 
 print("Exercise 1 \n")
 
