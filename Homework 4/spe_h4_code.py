@@ -108,7 +108,7 @@ class Simulator:
         self.current_time = 0 # set the current time to 0
         self.max_simulation_time = max_time # set a maximum simulation time
         self.initStartEndEventsQueue() # to insert the start event and end event in the queue
-        self.d_rate = d_rate
+        self.d_rate = d_rate # the rate for intervals of debug events
         self.initDebugEvents(d_rate) # to add some debug events in order to obtain useful information about the system
 
     def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
@@ -138,7 +138,6 @@ class Simulator:
                 self.event_queue.enqueue(new_arrival)
 
             elif event_type == "DEBUG":
-                #print("t = ", current_time, "DEBUG")
                 print("DEBUG EVENT #", int(self.current_time / self.d_rate))
                 print("The current time is:", self.current_time)
                 if system.getStatus() == 0:
