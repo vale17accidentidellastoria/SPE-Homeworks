@@ -123,11 +123,11 @@ class Simulator:
         self.initStartEndEventsQueue() # to insert the start event and end event in the queue
         self.d_rate = d_rate # the rate for intervals of debug events
         self.initDebugEvents(d_rate) # to add some debug events in order to obtain useful information about the system
-        self.total_num_packets_system = []
-        self.total_temporal_values = []
-        self.areas_under_qt = []
-        self.waiting_times_list = []
-        self.epochs_packets_served = []
+        self.total_num_packets_system = [] # number of packets in the system at each time
+        self.total_temporal_values = [] # to keep track of the occurrence time of each event
+        self.avg_system_utilization = [] # to measure the average system utilization
+        self.waiting_times_list = [] # the average waiting time for each packet
+        self.epochs_packets_served = [] # the time at which each packet is served and exits from queue
 
     def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
         start_event = Event(self.current_time, EType.start, None)
@@ -147,7 +147,7 @@ class Simulator:
         plt.bar(x_axis, y_axis, label="Instantaneous system utilisation", zorder=1)
         plt.hlines(avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed", label="Theoretical average", zorder=3)
 
-        plt.plot(x_axis, self.areas_under_qt, color='orange', linewidth=4, zorder=2, label="Average system utilization")
+        plt.plot(x_axis, self.avg_system_utilization, color='orange', linewidth=4, zorder=2, label="Average system utilization")
         plt.xlabel("time")
         plt.ylabel("# packets in the system (queue + in service)")
         plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
@@ -156,11 +156,14 @@ class Simulator:
         plt.show()
 
     def plotAvgQueueWaitTime(self, lambda_rate, mu_rate, avg_packets_wait_queue):
-        x_axis = np.arange(1, len(self.waiting_times_list) + 1)
+        x_axis = self.epochs_packets_served
         y_axis = []
 
-        for packet in x_axis:
-            y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
+        for packet in range(0, len(x_axis)):
+            if packet > 0:
+                y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
+            else:
+                y_axis.append(0)
 
         plt.hlines(avg_packets_wait_queue, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
                    label="Theoretical average", zorder=3)
@@ -175,16 +178,12 @@ class Simulator:
         plt.show()
 
         '''
-        #plots the same as before but with temporal values in the x-axis instead of the # of packets
-        x_axis = self.epochs_packets_served  # np.arange(1, len(self.waiting_times_list) + 1)
-        print(self.epochs_packets_served)
+        #plots the same as before but with the # of packets in the x-axis instead of temporal values
+        x_axis = np.arange(1, len(self.waiting_times_list) + 1)
         y_axis = []
 
-        for packet in range(0, len(x_axis)):
-            if packet > 0:
-                y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
-            else:
-                y_axis.append(0)
+        for packet in x_axis:
+            y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
 
         plt.hlines(avg_packets_wait_queue, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
                    label="Theoretical average", zorder=3)
@@ -213,10 +212,10 @@ class Simulator:
 
             if self.current_time > 0:
                 area_qt += (system.getTotalNumPacketsSystem()*(self.current_time - system.getTimeLastEvent()))
-                self.areas_under_qt.append(area_qt/self.current_time)
+                self.avg_system_utilization.append(area_qt / self.current_time)
             else:
                 area_qt = 0
-                self.areas_under_qt.append(area_qt)
+                self.avg_system_utilization.append(area_qt)
 
             current_num_packets_system = system.getTotalNumPacketsSystem()
             self.total_num_packets_system.append(current_num_packets_system)
