@@ -126,6 +126,8 @@ class Simulator:
         self.total_num_packets_system = []
         self.total_temporal_values = []
         self.areas_under_qt = []
+        self.waiting_times_list = []
+        self.epochs_packets_served = []
 
     def initStartEndEventsQueue(self): # this method adds the START and END queue events to initialize the empty event queue
         start_event = Event(self.current_time, EType.start, None)
@@ -153,9 +155,55 @@ class Simulator:
 
         plt.show()
 
+    def plotAvgQueueWaitTime(self, lambda_rate, mu_rate, avg_packets_wait_queue):
+        x_axis = np.arange(1, len(self.waiting_times_list) + 1)
+        y_axis = []
+
+        for packet in x_axis:
+            y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
+
+        plt.hlines(avg_packets_wait_queue, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
+                   label="Theoretical average", zorder=3)
+
+        plt.plot(x_axis, y_axis, color='orange', linewidth=4, zorder=2,
+                 label="Average waiting time")
+        plt.xlabel("# packets")
+        plt.ylabel("average waiting time in queue")
+        plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
+        plt.legend(loc="upper right")
+
+        plt.show()
+
+        '''
+        #plots the same as before but with temporal values in the x-axis instead of the # of packets
+        x_axis = self.epochs_packets_served  # np.arange(1, len(self.waiting_times_list) + 1)
+        print(self.epochs_packets_served)
+        y_axis = []
+
+        for packet in range(0, len(x_axis)):
+            if packet > 0:
+                y_axis.append(sum(self.waiting_times_list[:packet]) / packet)
+            else:
+                y_axis.append(0)
+
+        plt.hlines(avg_packets_wait_queue, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
+                   label="Theoretical average", zorder=3)
+
+        plt.plot(x_axis, y_axis, color='orange', linewidth=4, zorder=2,
+                 label="Average waiting time")
+        plt.xlabel("# packets")
+        plt.ylabel("average waiting time in queue")
+        plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
+        plt.legend(loc="upper right")
+
+        plt.show()
+        '''
+
     def runSimulation(self, arrival_rate_lambda, service_rate_mu):
         system = System() # create an instance of our system
         area_qt = 0
+
+        arrivals_queue = []
 
         #This is our event manager loop (Ex 1.5)
         while 1:
@@ -199,10 +247,20 @@ class Simulator:
                     self.event_queue.enqueue(new_arrival)
                     self.event_queue.enqueue(new_departure)
 
+                    serving_time = self.current_time
+                    arrival_time = self.current_time
+                    waiting_time = serving_time - arrival_time
+                    self.waiting_times_list.append(waiting_time)
+
+                    self.epochs_packets_served.append(self.current_time) # if necessary
+
                 elif system.getStatus() == 1:
                     system.incrementQueue()
                     new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
                     self.event_queue.enqueue(new_arrival)
+
+                    arrival_time = self.current_time
+                    arrivals_queue.append(arrival_time)
 
             elif event_type == "DEPARTURE":
                 #print("t = ", self.current_time, "DEPARTURE")
@@ -214,6 +272,13 @@ class Simulator:
                         system.decrementQueue()
                         new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None)
                         self.event_queue.enqueue(new_departure)
+
+                        arrival_time = arrivals_queue.pop(0)
+                        serving_time = self.current_time
+                        waiting_time = serving_time - arrival_time
+                        self.waiting_times_list.append(waiting_time)
+
+                        self.epochs_packets_served.append(self.current_time) # if necessary
 
             elif event_type == "END":
                 print("\n=> END of simulation at time t =", self.current_time, "\n")
@@ -250,6 +315,14 @@ for arrival_rate, service_rate in zip(lambdas, mus):
     print("Plotted number of packets in the system (queue + in service) against time with:")
     print("\t\u03C1 = " + str(rho))
     print("\ttheoretical average number of packets in the system in stationary conditions =", theoretical_avg_packets_stationary, "\n")
+
+    theoretical_avg_packets_wait_queue = pow(rho, 2) / (arrival_rate * (1 - rho))
+    simulator.plotAvgQueueWaitTime(arrival_rate, service_rate, theoretical_avg_packets_wait_queue)
+
+    print("Plotted average waiting times for packets in queue:")
+    print("\t\u03C1 = " + str(rho))
+    print("\ttheoretical average number of packets in the system in stationary conditions =",
+          theoretical_avg_packets_wait_queue, "\n")
 
     print("############\n")
 
