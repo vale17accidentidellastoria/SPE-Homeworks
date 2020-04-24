@@ -7,6 +7,7 @@ import scipy.stats as st
 import statsmodels.api as sm
 from scipy.spatial import distance
 import enum
+from statsmodels.distributions.empirical_distribution import ECDF
 
 random.seed()
 
@@ -167,22 +168,30 @@ class Simulator:
         else:
             last = 0
             start = 0
-            for i in range(1, epochs +1):
+
+            x = np.linspace(st.expon.ppf(0.01), st.expon.ppf(0.99), 100)
+            plt.plot(x, st.expon.cdf(x, loc=0, scale=1 / lambda_rate), linestyle="dashed", label="Theoretical ECDF")
+
+            max_xlim = 0
+
+            for i in range(1, epochs + 1):
                 x_axis = [x for x in self.total_temporal_values if last < x < (100*i)]
                 last = i*100
                 end = start + len(x_axis) - 1
                 y_axis = self.avg_system_utilization[start:end+1]
                 start = end + 1
 
-                plt.bar(x_axis, y_axis, label="Instantaneous system utilisation", zorder=1)
-                plt.hlines(avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
-                           label="Theoretical average", zorder=3)
+                legend_label = ("Time " + str((i-1)*100) + "-" + str(i*100) + "s")
+                ecdf = ECDF(y_axis)
+                max_xlim = max(np.max(ecdf.x), max_xlim)
+                plt.plot(ecdf.x, ecdf.y, label=legend_label)
 
-                plt.xlabel("time")
-                plt.ylabel("# packets in the system (queue + in service)")
-                plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
-
-                plt.show()
+            plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
+            #plt.xlim(0, 4.0)
+            plt.xlim([0, max_xlim + 0.3])
+            plt.ylim([0, 1.01])
+            plt.legend()
+            plt.show()
 
     def plotAvgQueueWaitTime(self, lambda_rate, mu_rate, avg_packets_wait_queue, epochs=0):
         x_axis = []
@@ -217,6 +226,12 @@ class Simulator:
         else:
             last = 0
             start = 0
+
+            x = np.linspace(st.expon.ppf(0.01), st.expon.ppf(0.99), 100)
+            plt.plot(x, st.expon.cdf(x, loc=0, scale=1 / lambda_rate), linestyle="dashed", label="Theoretical ECDF")
+
+            max_xlim = 0
+
             for i in range(1, epochs +1):
                 x_axis = [x for x in self.epochs_packets_served if last < x < (100*i)]
                 last = i*100
@@ -224,15 +239,16 @@ class Simulator:
                 y_axis = self.avg_waiting_times_list[start:end+1]
                 start = end + 1
 
-                plt.bar(x_axis, y_axis, label="Instantaneous system utilisation", color="green", zorder=1)
-                plt.hlines(avg_packets_wait_queue, min(x_axis), max(x_axis), colors="r", linestyles="dashed",
-                           label="Theoretical average", zorder=3)
+                legend_label = ("Time " + str((i - 1) * 100) + "-" + str(i * 100) + "s")
+                ecdf = ECDF(y_axis)
+                max_xlim = max(np.max(ecdf.x), max_xlim)
+                plt.plot(ecdf.x, ecdf.y, label=legend_label)
 
-                plt.xlabel("time")
-                plt.ylabel("average waiting time in queue")
-                plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
-
-                plt.show()
+            plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
+            plt.xlim([0, max_xlim + 0.3])
+            plt.ylim([0, 1.01])
+            plt.legend()
+            plt.show()
 
     def runSimulation(self, arrival_rate_lambda, service_rate_mu, c=1):
         if c == 1:
@@ -335,8 +351,8 @@ DEBUG_RATE = 100
 
 #lambdas = [0.2, 3, 10] # list of different values of arrival rates
 #mus = [0.4, 5, 30] # list of different values of service rate
-lambdas = [3]
-mus = [5]
+lambdas = [10]
+mus = [15]
 
 print("Exercise 1 \n")
 
@@ -362,8 +378,10 @@ for arrival_rate, service_rate in zip(lambdas, mus):
     print("\ttheoretical average number of packets in the system in stationary conditions =",
           theoretical_avg_packets_wait_queue, "\n")
 
-    #simulator.plotNumPacketsSystemTime(arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=10)
-    #simulator.plotAvgQueueWaitTime(arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=10)
+    simulator.plotNumPacketsSystemTime(arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=10)
+    print("Plotted ECDF of number of packets in the system for 10 different epochs!")
+    simulator.plotAvgQueueWaitTime(arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=10)
+    print("Plotted ECDF of queue waiting time for 10 different epochs!")
 
     print("############\n")
 
