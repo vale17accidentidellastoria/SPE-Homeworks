@@ -589,66 +589,20 @@ class Ex2Simulator:
                     arrival_time = self.current_time
                     arrivals_queue.append(arrival_time)
 
-                '''
-                packet_served = False
-                i = 0
-                for system in self.systems:
-                    i +=1
-                    #print('inside', end='')
-                    if system.getStatus() == 0 and not packet_served: #and not packet_served
-                        #print('status 0')
-                        system.setStatus(1)
-                        system.n_packets_served += 1
-                        new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
-                        new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None, server_index=system.index)
-                        self.event_queue.enqueue(new_arrival)
-                        self.event_queue.enqueue((new_departure))
-
-                        serving_time = self.current_time
-                        arrival_time = self.current_time
-                        waiting_time = serving_time - arrival_time
-                        self.waiting_times_list.append(waiting_time)
-
-                        self.epochs_packets_served.append(self.current_time) # if necessary
-                        packet_served = True
-                        #print('iterations', i)
-
-                    elif system.getStatus() == 1 and not packet_served: #== 1 and not packet_served
-                        self.queue_packets += 1
-                        new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
-                        self.event_queue.enqueue(new_arrival)
-
-                        arrival_time = self.current_time
-                        arrivals_queue.append(arrival_time)
-                        #print('iterations', i)
-                ###################################################
-                
-                if not packet_served:
-                    self.queue_packets += 1
-                    new_arrival = Event(self.current_time + random.expovariate(arrival_rate_lambda), EType.arrival, None)
-                    self.event_queue.enqueue(new_arrival)
-
-                    arrival_time = self.current_time
-                    arrivals_queue.append(arrival_time)
-                '''
                 #print('break worked after', i)
 
             elif event_type == "DEPARTURE":
-                #print("t = ", self.current_time, "DEPARTURE")
-                #try:
                 system = self.systems[event_index]
-                #print(event_index)
+
                 if system.getStatus() == 1:
-                    #print(self.queue_packets)
                     if self.queue_packets == 0:
                         system.setStatus(0)
                         #print("###SET STATUS 0######")
                     else:
                         if self.queue_packets > 0:
                             self.queue_packets -= 1
-                        #system.setStatus(0)
-                        #print('served packets', system.n_packets_served)
-                        new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None, server_index=event_index)#self.free_server_index())
+
+                        new_departure = Event(self.current_time + random.expovariate(service_rate_mu), EType.departure, None, server_index=event_index)
                         self.event_queue.enqueue(new_departure)
 
                         arrival_time = arrivals_queue.pop(0)
@@ -657,10 +611,6 @@ class Ex2Simulator:
                         self.waiting_times_list.append(waiting_time)
 
                         self.epochs_packets_served.append(self.current_time) # if necessary
-                '''
-                except:
-                    print('[ERROR OCCCURED] in DEPATURE --> additional info: event_index={}'.format(event_index))
-                '''
 
             elif event_type == "END":
                 print("\n=> END of simulation at time t =", self.current_time, "\n")
