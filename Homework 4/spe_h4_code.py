@@ -7,6 +7,7 @@ import scipy.stats as st
 import statsmodels.api as sm
 from scipy.spatial import distance
 import enum
+import gc
 from statsmodels.distributions.empirical_distribution import ECDF
 
 random.seed()
@@ -392,21 +393,18 @@ class Ex2Simulator:
         if self.queue_packets > 0:
             self.queue_packets -= 1
 
-    def plotNumPacketsSystemTime(self, system, lambda_rate, mu_rate, avg_packets_stationary, epochs=0):
+    def plotNumPacketsSystemTime(self, lambda_rate, mu_rate, avg_packets_stationary, epochs=0):
         x_axis = []
         y_axis = []
-        #print(system.total_num_packets_system[0:50], system.total_temporal_values[0:50], len(system.avg_system_utilization))
 
         if epochs == 0:
-            x_axis = system.total_temporal_values
-            y_axis = system.total_num_packets_system
-
-            #print(len(x_axis), len(y_axis), len(avg_packets_stationary))
+            x_axis = self.total_temporal_values
+            y_axis = self.total_num_packets_system
 
             plt.bar(x_axis, y_axis, label="Instantaneous system utilisation", zorder=1, alpha=0.6)
             plt.hlines(avg_packets_stationary, min(x_axis), max(x_axis), colors="r", linestyles="dashed", label="Theoretical average", zorder=3, alpha=0.8)
 
-            plt.plot(x_axis, system.avg_system_utilization, color='magenta', linewidth=2, zorder=2, label="Average system utilization")
+            plt.plot(x_axis, self.avg_system_utilization, color='magenta', linewidth=2, zorder=2, label="Average system utilization")
             plt.xlabel("time")
             plt.ylabel("# packets in the system (queue + in service)")
             plt.title("M/M/c, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
@@ -424,10 +422,10 @@ class Ex2Simulator:
             max_xlim = 0
 
             for i in range(1, epochs + 1):
-                x_axis = [x for x in system.total_temporal_values if last < x < (100*i)]
+                x_axis = [x for x in self.total_temporal_values if last < x < (100*i)]
                 last = i*100
                 end = start + len(x_axis) - 1
-                y_axis = system.avg_system_utilization[start:end+1]
+                y_axis = self.avg_system_utilization[start:end+1]
                 start = end + 1
 
                 legend_label = ("Time " + str((i-1)*100) + "-" + str(i*100) + "s")
@@ -442,7 +440,7 @@ class Ex2Simulator:
             plt.legend()
             plt.show()
 
-    def plotAvgQueueWaitTime(self, system, lambda_rate, mu_rate, avg_packets_wait_queue, epochs=0):
+    def plotAvgQueueWaitTime(self, lambda_rate, mu_rate, avg_packets_wait_queue, epochs=0):
         x_axis = []
         y_axis = []
 
@@ -467,7 +465,7 @@ class Ex2Simulator:
                      label="Average waiting time")
             plt.xlabel("# time")
             plt.ylabel("average waiting time in queue")
-            plt.title("M/M/1, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
+            plt.title("M/M/c, \u03BB = " + str(lambda_rate) + ", \u03BC = " + str(mu_rate))
             plt.legend(loc="upper right")
 
             plt.show()
@@ -505,7 +503,20 @@ class Ex2Simulator:
                 return system.index
         return 0
 
-    def runSimulation(self, arrival_rate_lambda, service_rate_mu, c=1):
+    def free_lowcount_index(self):
+        lowest = None
+        for system in self.systems:
+            if lowest == None:
+                lowest = system.n_packets_served
+            elif system.n_packets_served < lowest:
+                lowest = system.n_packets_served
+        #print(lowest)
+        for system in self.systems:
+            if system.getStatus() == 0 and system.n_packets_served <= lowest:
+                return system.index
+        return 0
+
+    def runSimulation(self, arrival_rate_lambda, service_rate_mu, c=1, balancer=False):
         #system
         for i in range(c):
             self.systems.append(SystemEx2(index=i))
@@ -528,18 +539,15 @@ class Ex2Simulator:
 
             if self.current_time > 0:                
                 area_qt += ((self.queue_packets + tot)*(self.current_time - system.getTimeLastEvent()))
-                for system in self.systems:                    
-                    system.avg_system_utilization.append(area_qt / self.current_time)
+                self.avg_system_utilization.append(area_qt / self.current_time)
             else:
                 area_qt = 0
-                for system in self.systems:
-                    system.avg_system_utilization.append(area_qt)
+                self.avg_system_utilization.append(area_qt)
 
             current_num_packets_system = self.queue_packets + tot
 
-            for system in self.systems:
-                system.total_num_packets_system.append(current_num_packets_system)
-                system.total_temporal_values.append(self.current_time)
+            self.total_num_packets_system.append(current_num_packets_system)
+            self.total_temporal_values.append(self.current_time)
 
             if event_type == "START":
                 print("=> START of simulation at time t =", self.current_time, "\n")
@@ -562,8 +570,11 @@ class Ex2Simulator:
 
             elif event_type == "ARRIVAL":
                 #print("t = ", self.current_time, "ARRIVAL")
+                if balancer:
+                    index_free_system = self.free_lowcount_index()#self.free_server_index() 
+                else:
+                    index_free_system = self.free_server_index()
 
-                index_free_system = self.free_server_index() 
                 system = self.systems[index_free_system]
                 
                 if system.getStatus() == 0:
@@ -622,10 +633,132 @@ class Ex2Simulator:
             
             for system in self.systems:
                 system.setTimeLastEvent(self.current_time)
+
+class MMcQueue(object):
+    def __init__(self, arrival, departure, capacity):
+        self._arrival = float(arrival)
+        self._departure = float(departure)
+        self._capacity = capacity
+        self._rou = self._arrival / self._departure / self._capacity
+
+        # init the parameter as if the capacity == 0
+        powerTerm = 1.0
+        factorTerm = 1.0
+        preSum = 1.0
+        # Loop through `1` to `self._capacity` to get each term and preSum
+        for i in range(1, self._capacity + 1):
+            powerTerm *= self._arrival / self._departure
+            factorTerm /= i
+            preSum += powerTerm * factorTerm
+        self._finalTerm = powerTerm * factorTerm
+        preSum -= self._finalTerm
+        self._p0 = 1.0 / (preSum + self._finalTerm / (1 - self._rou))
+        self._pc = self._finalTerm * self._p0
+        self._probSum = preSum * self._p0
+
+
+    @property
+    def arrival(self):
+        return self._arrival
+
+    @property
+    def departure(self):
+        return self._departure
+
+    @property
+    def capacity(self):
+        return self._capacity
+
+    def getPk(self, k):
+        """
+        Return the probability when there are `k` packets in the system
+        """
+        if k == 0:
+            return self._p0
+        elif k == self._capacity:
+            return self._pc
+        elif k < self._capacity:
+            factorTerm = 1.0 / math.factorial(k)
+            powerTerm = math.pow(self._arrival / self._departure, k)
+            return self._p0 * factorTerm * powerTerm
+        else:
+            return self._finalTerm * math.pow(self._rou, k - self._capacity) * self._p0
+
+    def getQueueProb(self):
+        """
+        Return the probability when a packet comes, it needs to queue in the buffer.
+        That is, P(W>0) = 1 - P(N < c)
+        Also known as Erlang-C function
+        """
+        return 1.0 - self._probSum
+
+    def getIdleProb(self):
+        """
+        Return the probability when the sever is idle.
+        That is , P(N=0)
+        """
+        return self._p0
+
+    def getAvgPackets(self):
+        """
+        Return the average number of packets in the system (in service and in the queue)
+        """
+        return self._rou / (1 - self._rou) * self.getQueueProb() + self._capacity * self._rou
+
+    def getAvgQueueTime(self):
+        """
+        Return the average time of packets spending in the queue
+        """
+        return self.getQueueProb() / (self._capacity * self._departure - self._arrival)
+
+    def getAvgQueuePacket_Given(self):
+        """
+        Given there is packet in the queue,
+        return the average number of packets in the queue
+        """
+        return self._finalTerm * self._p0 / (1.0 - self._rou) / (1.0 - self._rou)
+
+    def getAvgQueueTime_Given(self):
+        """
+        Given a packet must wait, 
+        return the average time of this packet spending in the queue
+        """
+        if self.getQueueProb() == 0:
+            return 0
+        return self.getAvgQueuePacket_Given() / (self.getQueueProb() * self._arrival)
+
+    def getAvgResponseTime(self):
+        """
+        Return the average time of packets spending in the system (in service and in the queue)
+        """
+        return self.getAvgQueueTime() + 1.0 / self._departure
+
+    def getAvgPacketInSystem(self):
+        """
+        Return the average number of packets in the system.
+        """
+        return self.getAvgResponseTime() * self._arrival
+
+    def getAvgBusyServer(self):
+        """
+        Return the average number of busy Server.
+        """
+        return self.arrival / self.departure
+
+
+    def getPorbWhenQueueTimeLargerThan(self, queueTime):
+        """
+        Return the probability when the queuing time of the packet is larger than `queueTime`
+        That is P(W > queueTime) = 1 - P(W <= queueTime)
+        """
+        firstTerm = self._pc / (1.0 - self._rou)
+        expTerm = - self._capacity * self._departure * (1.0 - self._rou) * queueTime
+        secondTerm = math.exp(expTerm)
+        return firstTerm * secondTerm
 # --------------------------------------------
 
 # Exercise 1
-'''
+
 MAX_SIMULATION_TIME = 1000
 DEBUG_RATE = 100
 
@@ -664,60 +797,90 @@ for arrival_rate, service_rate in zip(lambdas, mus):
     print("Plotted ECDF of queue waiting time for 10 different epochs!")
 
     print("############\n")
-'''
+
 
 # --------------------------------------------
-
+gc.collect()
 # Exercise 2
 
 print("Exercise 2 \n")
 
 MAX_SIMULATION_TIME = 1000
-DEBUG_RATE = 10
+DEBUG_RATE = 100
 
 #lambdas = [0.2, 3, 10] # list of different values of arrival rates
 #mus = [0.4, 5, 30] # list of different values of service rate
-lambdas = [5]
-mus = [2.6]
+lambdas = [10]
+mus = [5]
+servers = 5
 
 for arrival_rate, service_rate in zip(lambdas, mus):
     print("-- Simulation running with \u03BB = " + str(arrival_rate) + ", \u03BC = " + str(service_rate) + " --\n")
     simulator = Ex2Simulator(MAX_SIMULATION_TIME, DEBUG_RATE)
 
-    simulator.runSimulation(arrival_rate, service_rate, c=2)
+    simulator.runSimulation(arrival_rate, service_rate, c=servers)
 
-    #print(simulator.systems)
-    rho = arrival_rate / service_rate
-    theoretical_avg_packets_stationary = rho / (1 - rho)
-    for system in simulator.systems:
-        simulator.plotNumPacketsSystemTime(system, arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=0)
+    queue = MMcQueue(arrival_rate, service_rate, servers)
+    theoretical_avg_packets_stationary = queue.getAvgPacketInSystem()
+
+    rho = arrival_rate / (servers*service_rate)
+    simulator.plotNumPacketsSystemTime(arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=0)
 
     print("Plotted number of packets in the system (queue + in service) against time with:")
     print("\t\u03C1 = " + str(rho))
     print("\ttheoretical average number of packets in the system in stationary conditions =", theoretical_avg_packets_stationary, "\n")
 
-    theoretical_avg_packets_wait_queue = pow(rho, 2) / (arrival_rate * (1 - rho))
-    for system in simulator.systems:
-        simulator.plotAvgQueueWaitTime(system, arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=0)
+    theoretical_avg_packets_wait_queue = queue.getAvgQueueTime()#pow(rho, 2) / (arrival_rate * (1 - rho))
+    simulator.plotAvgQueueWaitTime(arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=0)
 
     print("Plotted average waiting times for packets in queue:")
     print("\t\u03C1 = " + str(rho))
     print("\ttheoretical average number of packets in the system in stationary conditions =",
           theoretical_avg_packets_wait_queue, "\n")
 
-    for system in simulator.systems:
-        simulator.plotNumPacketsSystemTime(system, arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=10)
-
+    simulator.plotNumPacketsSystemTime(arrival_rate, service_rate, theoretical_avg_packets_stationary, epochs=10)
     print("Plotted ECDF of number of packets in the system for 10 different epochs!")
-    for system in simulator.systems:
-        simulator.plotAvgQueueWaitTime(system, arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=10)
+
+    simulator.plotAvgQueueWaitTime(arrival_rate, service_rate, theoretical_avg_packets_wait_queue, epochs=10)
     print("Plotted ECDF of queue waiting time for 10 different epochs!")
+    
+    server_served_y = []
+    for system in simulator.systems:
+        server_served_y.append(system.n_packets_served)
+    servers_id = np.arange(servers)
+
+    plt.title('Packets served without balancer')
+    plt.bar(servers_id, server_served_y, align='center', alpha=0.5)
+    plt.xticks(servers_id, servers_id)
+    plt.xlabel('server id')
+    plt.ylabel('Served Packets')
+
+    plt.show()
+    print("Plotted Histogram showing the number of packets served by each server where c={}.".format(servers))
+
+    simulator_balancer = Ex2Simulator(MAX_SIMULATION_TIME, DEBUG_RATE)
+
+    simulator_balancer.runSimulation(arrival_rate, service_rate, c=servers, balancer=True)
+
+    server_served_y = []
+    for system in simulator_balancer.systems:
+        server_served_y.append(system.n_packets_served)
+    servers_id = np.arange(servers)
+
+    plt.title('Packets served with balancer')
+    plt.bar(servers_id, server_served_y, align='center', alpha=0.5)
+    plt.xticks(servers_id, servers_id)
+    plt.xlabel('server id')
+    plt.ylabel('Served Packets')
+    print("Plotted Histogram showing the number of packets served by each server where c={} with balancer.".format(servers))
+
+    plt.show()
 
     print("############\n")
-
+    
 
 # --------------------------------------------
-
+gc.collect()
 # Exercise 3
 
 
